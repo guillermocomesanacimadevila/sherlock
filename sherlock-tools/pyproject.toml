@@ -9,7 +9,7 @@ description = "Python library behind the nf-core/sherlock pipeline"
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "Guillermo Comesaña Cimadevila", email = "ComesanaCimadevilaG@cardiff.ac.uk" }]
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -17,6 +17,7 @@ classifiers = [
 ]
 dependencies = [
     "polars>=1.0",
+    "liftover>=1.1",
     "requests>=2.31",
 ]
 
