@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sherlock-tools"
+version = "0.1.0.dev0"
+description = "Python library behind the nf-core/sherlock pipeline"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Guillermo Comesaña Cimadevila", email = "ComesanaCimadevilaG@cardiff.ac.uk" }]
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "polars>=1.0",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+]
+dev = [
+    "sherlock-tools[test]",
+    "ruff>=0.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/guillermocomesanacimadevila/sherlock"
+Issues = "https://github.com/guillermocomesanacimadevila/sherlock/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sherlock_tools"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
