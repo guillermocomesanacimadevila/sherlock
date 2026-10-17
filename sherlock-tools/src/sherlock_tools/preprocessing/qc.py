@@ -268,20 +268,20 @@ class QualityControl:
             return self.sumstats
 
         if self.target_genome_build == "GRCh38":
-            mhc_start = 43495848
-            mhc_end = 45996742
+            apoe_start = 43495848
+            apoe_end = 45996742
         elif self.target_genome_build == "GRCh37":
-            mhc_start = 44000000
-            mhc_end = 46500000
+            apoe_start = 44000000
+            apoe_end = 46500000
         else:
             raise ValueError(f"Unsupported target_genome_build: {self.target_genome_build}")
         
         n_before = self.sumstats.height
         df = self.sumstats.filter(
             ~(
-                (pl.col(self.chr_col) == "6") &
-                (pl.col(self.pos_col) >= mhc_start) &
-                (pl.col(self.pos_col) <= mhc_end)
+                (pl.col(self.chr_col) == "19") &
+                (pl.col(self.pos_col) >= apoe_start) &
+                (pl.col(self.pos_col) <= apoe_end)
             )
         )
         n_after = df.height
