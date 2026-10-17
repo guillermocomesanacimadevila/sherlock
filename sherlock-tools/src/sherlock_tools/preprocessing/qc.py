@@ -28,7 +28,7 @@ class QualityControl:
             info_col: str | None = None,
             info_thresh: float | None = None,
             freq_col: str | None = None,
-            chain_file: str | None = None,
+            chain_file: str | None = None, # although in params.yaml arg -> liftover_dir/
             drop_mhc: bool = True,
             drop_apoe: bool = False,
         ):
@@ -110,6 +110,22 @@ class QualityControl:
         self.sumstats = df
         return df
 
+    def _remove_duplicates(self):
+        df = self.sumstats.unique(subset=[self.snp_col])
+        return df
+
+    def _remove_multiallelic(self):
+        # run after duplicate removal -> any repeated CHR:POS left = different alleles
+        n_before = self.sumstats.height
+        df = self.sumstats.filter(
+            pl.len().over([self.chr_col, self.pos_col]) == 1
+        )
+        n_after = df.height
+        print(f"Removed multiallelic variants: {n_before - n_after}")
+        print(f"Rows after multiallelic removal: {n_after}")
+        self.sumstats = df
+        return df
+
     def _remove_indels(self):
         bases = ["A", "T", "C", "G"]
         a1 = pl.col(self.a1_col)
@@ -124,19 +140,96 @@ class QualityControl:
         self.sumstats = df
         return df
 
-    ######## -> some more to go here!!!!!
-    # def _remove_palindromes()
-    # def _handle_multiallelic()
-    # def _liftover()
-    # def _align_betas()
-    # def _impute_effective_n()
-    # def _maf_filter()
-    # def _info_filter()
+    def _remove_palindromes(self):
+        # A/T and C/G SNPs -> strand can't be resolved, always dropped
+        a1 = pl.col(self.a1_col)
+        a2 = pl.col(self.a2_col)
+        is_palindrome = (
+            ((a1 == "A") & (a2 == "T")) |
+            ((a1 == "T") & (a2 == "A")) |
+            ((a1 == "C") & (a2 == "G")) |
+            ((a1 == "G") & (a2 == "C"))
+        )
+        n_before = self.sumstats.height
+        df = self.sumstats.filter(~is_palindrome)
+        n_after = df.height
+        print(f"Removed palindromic SNPs: {n_before - n_after}")
+        print(f"Rows after palindrome removal: {n_after}")
+        self.sumstats = df
+        return df
+    
+    def _maf_filter(self):
+        if self.freq_col is None:
+            print("Skipping MAF filter: no frequency column supplied.")
+            return self.sumstats
 
+        df = self.sumstats.filter(
+            pl.col(self.freq_col) >= self.maf_thresh
+        )
+        self.sumstats = df
+        return df
+
+    def _info_filter(self):
+        if self.info_col is None:
+            print("Skipping INFO filter: no frequency column supplied.")
+            return self.sumstats
+
+        df = self.sumstats.filter(
+            pl.col(self.info_col <= self.info_thresh)
+        )
+        self.sumstats = df
+        return df
+
+    def _impute_effective_n(self):
+        # per-SNP N given -> keep it (_standardise_shape renames n_col -> N)
+        if self.n_col is not None:
+            print(f"Using per-SNP sample size from column: {self.n_col}")
+            return self.sumstats
+
+        # depends on whether type == cc / quant
+        if self.trait_type == "quant":
+            if self.n is None:
+                raise ValueError("trait_type 'quant' needs n_col or n")
+            n_eff = int(round(self.n))
+        elif self.trait_type == "cc":
+            if self.n_cases is None or self.n_controls is None:
+                raise ValueError("trait_type 'cc' needs n_col or n_cases + n_controls")
+            n_eff = int(round(4 * self.n_cases * self.n_controls / (self.n_cases + self.n_controls)))
+        else:
+            raise ValueError(f"Unsupported trait_type: {self.trait_type}")
+
+        df = self.sumstats.with_columns(pl.lit(n_eff).alias("N"))
+        print(f"N set to: {n_eff} ({self.trait_type})")
+        self.sumstats = df
+        return df
+    
+
+    def _liftover():
+        return
 
     # --- --- --- --- --- --- --- --- --- --- --- 
     # --- These bottom ones -> after _liftover()
     # --- --- --- --- --- --- --- --- --- --- --- 
+
+    def _align_betas(self):
+        # align to risk allele: BETA < 0 -> flip sign + swap A1/A2 (+ FRQ -> 1 - FRQ)
+        flip = pl.col(self.beta_col) < 0
+        n_flip = self.sumstats.filter(flip).height
+
+        cols = [
+            pl.when(flip).then(-pl.col(self.beta_col)).otherwise(pl.col(self.beta_col)).alias(self.beta_col),
+            pl.when(flip).then(pl.col(self.a2_col)).otherwise(pl.col(self.a1_col)).alias(self.a1_col),
+            pl.when(flip).then(pl.col(self.a1_col)).otherwise(pl.col(self.a2_col)).alias(self.a2_col),
+        ]
+        if self.freq_col is not None:
+            cols.append(
+                pl.when(flip).then(1 - pl.col(self.freq_col)).otherwise(pl.col(self.freq_col)).alias(self.freq_col)
+            )
+
+        df = self.sumstats.with_columns(cols)
+        print(f"Flipped to risk allele: {n_flip}")
+        self.sumstats = df
+        return df
 
     # removing specific regions
     def _remove_mhc(self):
