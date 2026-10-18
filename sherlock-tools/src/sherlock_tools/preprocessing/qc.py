@@ -91,6 +91,19 @@ class QualityControl:
         self.sumstats = df
         return df
 
+    def _fix_pval(self):
+        # P == 0 (underflow) -> 1e-300, so downstream Z / -log10(P) stay finite
+        n_zero = self.sumstats.filter(pl.col(self.pval_col) == 0).height
+        df = self.sumstats.with_columns(
+            pl.when(pl.col(self.pval_col) == 0)
+            .then(1e-300)
+            .otherwise(pl.col(self.pval_col))
+            .alias(self.pval_col)
+        )
+        print(f"Replaced P == 0 with 1e-300: {n_zero}")
+        self.sumstats = df
+        return df
+
     def _restrict_to_autosomal(self):
         # keep chr 1-22 only ("chr" prefix already stripped in _fix_data_types)
         autosomes = [str(i) for i in range(1, 23)]
@@ -390,6 +403,7 @@ class QualityControl:
         print(f"Rows at start: {self.sumstats.height}")
         self._fix_data_types()
         self._correct_for_missingness()
+        self._fix_pval()
         self._remove_indels()
         self._remove_palindromes()
         self._remove_duplicates()
