@@ -4,7 +4,11 @@ from liftover import ChainFile
 
 class QualityControl:
 
-    """ Object compiling all functions pertaining to GWAS/xQTL QC """
+    """ 
+    Object compiling all functions pertaining to GWAS/xQTL QC 
+    - To do's:
+    - Make liftover allele-aware
+    """
 
     def __init__(
             self,
@@ -72,10 +76,10 @@ class QualityControl:
         # strict=False -> values that can't be cast become null (caught by _correct_for_missingness)
         df = self.sumstats.with_columns(
             pl.col(self.snp_col).cast(pl.String),
-            pl.col(self.chr_col).cast(pl.String),
+            pl.col(self.chr_col).cast(pl.String).str.replace(r"(?i)^chr", ""),
             pl.col(self.pos_col).cast(pl.Int64, strict=False),
-            pl.col(self.a1_col.upper()).cast(pl.String),
-            pl.col(self.a2_col.upper()).cast(pl.String),
+            pl.col(self.a1_col).cast(pl.String).str.to_uppercase(),
+            pl.col(self.a2_col).cast(pl.String).str.to_uppercase(),
             pl.col(self.beta_col).cast(pl.Float64, strict=False),
             pl.col(self.se_col).cast(pl.Float64, strict=False),
             pl.col(self.pval_col).cast(pl.Float64, strict=False),
@@ -84,6 +88,17 @@ class QualityControl:
         # optional cols if given
         optional_cols = [c for c in [self.n_col, self.freq_col, self.info_col] if c is not None]
         df = df.with_columns(pl.col(c).cast(pl.Float64, strict=False) for c in optional_cols)
+        self.sumstats = df
+        return df
+
+    def _restrict_to_autosomal(self):
+        # keep chr 1-22 only ("chr" prefix already stripped in _fix_data_types)
+        autosomes = [str(i) for i in range(1, 23)]
+        n_before = self.sumstats.height
+        df = self.sumstats.filter(pl.col(self.chr_col).is_in(autosomes))
+        n_after = df.height
+        print(f"Removed non-autosomal variants: {n_before - n_after}")
+        print(f"Rows after autosome restriction: {n_after}")
         self.sumstats = df
         return df
 
@@ -111,7 +126,13 @@ class QualityControl:
         return df
 
     def _remove_duplicates(self):
-        df = self.sumstats.unique(subset=[self.snp_col])
+        # duplicated SNP IDs -> drop all copies (can't tell which one is right)
+        n_before = self.sumstats.height
+        df = self.sumstats.unique(subset=[self.snp_col], keep="none", maintain_order=True)
+        n_after = df.height
+        print(f"Removed duplicated SNPs: {n_before - n_after}")
+        print(f"Rows after duplicate removal: {n_after}")
+        self.sumstats = df
         return df
 
     def _remove_multiallelic(self):
@@ -163,20 +184,29 @@ class QualityControl:
             print("Skipping MAF filter: no frequency column supplied.")
             return self.sumstats
 
+        # FRQ = A1 freq -> MAF = min(FRQ, 1 - FRQ)
+        n_before = self.sumstats.height
         df = self.sumstats.filter(
-            pl.col(self.freq_col) >= self.maf_thresh
+            pl.min_horizontal(pl.col(self.freq_col), 1 - pl.col(self.freq_col)) >= self.maf_thresh
         )
+        n_after = df.height
+        print(f"Removed low-MAF variants: {n_before - n_after}")
+        print(f"Rows after MAF filter: {n_after}")
         self.sumstats = df
         return df
 
     def _info_filter(self):
         if self.info_col is None:
-            print("Skipping INFO filter: no frequency column supplied.")
+            print("Skipping INFO filter: no INFO column supplied.")
             return self.sumstats
 
+        n_before = self.sumstats.height
         df = self.sumstats.filter(
-            pl.col(self.info_col <= self.info_thresh)
+            pl.col(self.info_col) >= self.info_thresh
         )
+        n_after = df.height
+        print(f"Removed low-INFO variants: {n_before - n_after}")
+        print(f"Rows after INFO filter: {n_after}")
         self.sumstats = df
         return df
 
@@ -203,15 +233,52 @@ class QualityControl:
         self.sumstats = df
         return df
     
+    def _liftover(self):
+        # same build -> nothing to do
+        if self.genome_build == self.target_genome_build:
+            print(f"Skipping liftover: already {self.target_genome_build}")
+            return self.sumstats
 
-    def _liftover():
-        return
+        converter = ChainFile(self.chain_file, one_based=True)
+        chrs = self.sumstats[self.chr_col].to_list()
+        poss = self.sumstats[self.pos_col].to_list()
+        lifted_chrs = []
+        lifted_poss = []
 
-    # --- --- --- --- --- --- --- --- --- --- --- 
-    # --- These bottom ones -> after _liftover()
-    # --- --- --- --- --- --- --- --- --- --- --- 
+        for chrom, pos in zip(chrs, poss):
+            hits = converter[f"chr{chrom}"][int(pos)]
 
-    def _align_betas(self):
+            # no hit, or lands on another chr / alt contig -> drop
+            if len(hits) == 0 or hits[0][0].replace("chr", "") != chrom:
+                lifted_chrs.append(None)
+                lifted_poss.append(None)
+            else:
+                lifted_chrs.append(chrom)
+                lifted_poss.append(hits[0][1])
+
+        df = self.sumstats.with_columns([
+            pl.Series("CHR_LIFTED", lifted_chrs),
+            pl.Series("POS_LIFTED", lifted_poss),
+        ])
+
+        n_before = df.height
+        df = df.drop_nulls(["CHR_LIFTED", "POS_LIFTED"])
+        n_after = df.height
+        print(f"Removed failed liftover variants: {n_before - n_after}")
+        print(f"Rows after liftover: {n_after}")
+        df = df.with_columns([
+            pl.col("CHR_LIFTED").alias(self.chr_col),
+            pl.col("POS_LIFTED").cast(pl.Int64).alias(self.pos_col),
+        ])
+        df = df.drop(["CHR_LIFTED", "POS_LIFTED"])
+        self.sumstats = df
+        return df
+
+    # --- --- --- --- --- --- --- --- --- --- --- --- --- 
+    # --- These bottom ones -> after _liftover() functs
+    # --- --- --- --- --- --- --- --- --- --- --- --- --- 
+
+    def _align_betas_to_risk_allele(self):
         # align to risk allele: BETA < 0 -> flip sign + swap A1/A2 (+ FRQ -> 1 - FRQ)
         flip = pl.col(self.beta_col) < 0
         n_flip = self.sumstats.filter(flip).height
@@ -316,4 +383,8 @@ class QualityControl:
 
         df = self.sumstats.select(cols)
         self.sumstats = df
-        return df
+        return df 
+
+    # running wrapper for class -> thin wrapper in bin/ & nf module/subworkflow later!!!!
+    def run(self):
+        return
