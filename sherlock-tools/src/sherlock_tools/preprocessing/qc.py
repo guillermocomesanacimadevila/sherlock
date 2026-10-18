@@ -387,4 +387,22 @@ class QualityControl:
 
     # running wrapper for class -> thin wrapper in bin/ & nf module/subworkflow later!!!!
     def run(self):
-        return
+        print(f"Rows at start: {self.sumstats.height}")
+        self._fix_data_types()
+        self._correct_for_missingness()
+        self._remove_indels()
+        self._remove_palindromes()
+        self._remove_duplicates()
+        self._remove_multiallelic()
+        self._restrict_to_autosomal()
+        self._maf_filter()
+        self._info_filter()
+        self._liftover()
+        self._remove_multiallelic()
+        self._remove_mhc()
+        self._remove_apoe()
+        self._align_betas_to_risk_allele()
+        self._impute_effective_n()
+        self._standardise_shape()
+        print(f"Rows at end: {self.sumstats.height}")
+        return self.sumstats
