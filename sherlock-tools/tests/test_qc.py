@@ -38,7 +38,6 @@ def toy_df():
     return pl.DataFrame(ROWS, schema=COLS, orient="row")
 
 # print(toy_df())
-
 @pytest.fixture
 def make_qc(toy_df):
     # factory -> each test can override any arg
@@ -94,3 +93,147 @@ def test_correct_for_missingness(make_qc):
     before = qc._fix_data_types()
     after = qc._correct_for_missingness()
     assert removed(before, after) == {"rs12"}
+
+def test_restrict_to_autosomal(make_qc):
+    qc = make_qc()
+    before = qc._fix_data_types()
+    after = qc._restrict_to_autosomal()
+    assert removed(before, after) == {"rs8"}
+
+def test_remove_duplicates(make_qc):
+    qc = make_qc()
+    before = qc._fix_data_types()
+    after = qc._remove_duplicates()
+    assert removed(before, after) == {"rs5"}
+
+def test_remove_multiallelic(make_qc):
+    qc = make_qc()
+    before = qc._fix_data_types()
+    after = qc._remove_multiallelic()
+    assert removed(before, after) == {"rs6", "rs7"}
+
+def test_remove_indels(make_qc):
+    qc = make_qc()
+    before = qc._fix_data_types()
+    after = qc._remove_indels()
+    assert removed(before, after) == {"rs3"}
+
+def test_remove_palindromes(make_qc):
+    qc = make_qc()
+    before = qc._fix_data_types()
+    after = qc._remove_palindromes()
+    assert removed(before, after) == {"rs4"}
+
+def test_maf_filter(make_qc):
+    qc = make_qc()
+    before = qc._fix_data_types()
+    after = qc._maf_filter()
+    assert removed(before, after) == {"rs9", "rs10"}
+
+def test_maf_filter_skips_without_freq(make_qc):
+    qc = make_qc(freq_col=None)
+    before = qc._fix_data_types()
+    after = qc._maf_filter()
+    assert after.height == before.height
+
+def test_info_filter(make_qc):
+    qc = make_qc()
+    before = qc._fix_data_types()
+    after = qc._info_filter()
+    assert removed(before, after) == {"rs11"}
+
+def test_remove_mhc(make_qc):
+    qc = make_qc()
+    before = qc._fix_data_types()
+    after = qc._remove_mhc()
+    assert removed(before, after) == {"rs13"}
+
+def test_keep_mhc(make_qc):
+    qc = make_qc(drop_mhc=False)
+    before = qc._fix_data_types()
+    after = qc._remove_mhc()
+    assert after.height == before.height
+
+def test_remove_apoe(make_qc):
+    qc = make_qc()
+    before = qc._fix_data_types()
+    after = qc._remove_apoe()
+    assert removed(before, after) == {"rs14"}
+
+def test_keep_apoe(make_qc):
+    qc = make_qc(drop_apoe=False)
+    before = qc._fix_data_types()
+    after = qc._remove_apoe()
+    assert after.height == before.height
+
+def test_align_betas_to_risk_allele(make_qc):
+    qc = make_qc()
+    qc._fix_data_types()
+    df = qc._align_betas_to_risk_allele()
+    rs2 = df.filter(pl.col("MarkerName") == "rs2").row(0, named=True)
+    assert rs2["Beta"] == 0.2
+    assert (rs2["EA"], rs2["NEA"]) == ("C", "A")
+    assert rs2["Freq"] == pytest.approx(0.6)
+    assert (df["Beta"].drop_nulls() >= 0).all()
+
+# sample size
+def test_effective_n_cc(make_qc):
+    qc = make_qc()
+    df = qc._impute_effective_n()
+    assert (df["N"] == 3000).all()  # 4 * 1000 * 3000 / 4000
+
+def test_effective_n_quant(make_qc):
+    qc = make_qc(trait_type="quant", n=5000, n_cases=None, n_controls=None)
+    df = qc._impute_effective_n()
+    assert (df["N"] == 5000).all()
+
+def test_effective_n_missing_raises(make_qc):
+    qc = make_qc(trait_type="quant", n=None)
+    with pytest.raises(ValueError):
+        qc._impute_effective_n()
+
+# liftover (fake chain file -> no real file needed)
+class FakeChainFile:
+    # chr1 -> +100 bp, chr2 -> no hit, chr15 -> lands on chr16
+    def __init__(self, path, one_based=True):
+        pass
+
+    def __getitem__(self, chrom):
+        def lookup(pos):
+            if chrom == "chr1":
+                return [("chr1", pos + 100, "+")]
+            if chrom == "chr15":
+                return [("chr16", pos, "+")]
+            return []
+        return _Lookup(lookup)
+
+class _Lookup:
+    def __init__(self, fn):
+        self.fn = fn
+
+    def __getitem__(self, pos):
+        return self.fn(pos)
+
+def test_liftover_skips_same_build(make_qc):
+    qc = make_qc()
+    before = qc._fix_data_types()
+    after = qc._liftover()
+    assert after.equals(before)
+
+def test_liftover(make_qc, monkeypatch):
+    monkeypatch.setattr("sherlock_tools.preprocessing.qc.ChainFile", FakeChainFile)
+    qc = make_qc(genome_build="GRCh37", chain_file="fake.chain")
+    qc._fix_data_types()
+    qc.sumstats = qc.sumstats.filter(pl.col("MarkerName").is_in(["rs1", "rs2", "rs15"]))
+    df = qc._liftover()
+    assert df["MarkerName"].to_list() == ["rs1"]  # rs2 no hit, rs15 changed chr
+    assert df["Pos"].item() == 1100
+
+# full run
+def test_run(make_qc):
+    df = make_qc().run()
+    assert df.columns == ["SNP", "CHR", "BP", "A1", "A2", "BETA", "SE", "P", "N", "FRQ", "INFO"]
+    assert set(df["SNP"].to_list()) == {"rs1", "rs2", "rs15"}
+    assert (df["BETA"] >= 0).all()
+    assert (df["P"] > 0).all()
+    assert (df["N"] == 3000).all()
