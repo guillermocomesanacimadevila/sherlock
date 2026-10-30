@@ -241,7 +241,7 @@ class QualityControl:
         else:
             raise ValueError(f"Unsupported trait_type: {self.trait_type}")
 
-        df = self.sumstats.with_columns(pl.lit(n_eff).alias("N"))
+        df = self.sumstats.with_columns(pl.lit(n_eff, dtype=pl.Int64).alias("N"))
         print(f"N set to: {n_eff} ({self.trait_type})")
         self.sumstats = df
         return df
