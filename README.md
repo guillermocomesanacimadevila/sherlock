@@ -60,7 +60,6 @@ Now, you can run the pipeline using:
 nextflow run nf-core/sherlock \
     -profile docker \
     --input gwas_pair.csv \
-    --qtl_manifest qtl_manifest.csv \
     --outdir results \
     --email you@mail.com \
     -params-file params.yaml
