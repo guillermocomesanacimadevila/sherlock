@@ -3,7 +3,7 @@ process SHERLOCK_QC {
     label 'process_low'
 
     conda "${moduleDir}/environment.yml"
-    // container: add once the Seqera container exists (step 8)
+    container "community.wave.seqera.io/library/python_polars_pip_liftover_sherlock-tools:0df83d52010315df"
 
     input:
     tuple val(meta), path(sumstats) // one trait: [ samplesheet row, sumstats file ]
