@@ -1,6 +1,9 @@
 # Example settings for nf-core/sherlock
 # Run from the repo root:
-#   nextflow run . -profile docker -params-file projects/example/params.yaml
+# nextflow run . -profile docker \
+#     --input projects/test/gwas_pair.csv \
+#     --outdir projects/test/results \
+#     -params-file projects/test/params.yaml
 # Copy this folder (e.g. to projects/my_run/) and replace the /path/to/ values with your own files.
 
 # inputs / outputs
