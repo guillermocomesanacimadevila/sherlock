@@ -56,13 +56,14 @@ Each row represents a fastq file (single-end) or a pair of fastq files (paired e
 
 Now, you can run the pipeline using:
 
-<!-- TODO nf-core: update the following command to include all required parameters for a minimal example -->
-
 ```bash
 nextflow run nf-core/sherlock \
-   -profile <docker/singularity/.../institute> \
-   --input samplesheet.csv \
-   --outdir <OUTDIR>
+    -profile docker \
+    --input gwas_pair.csv \
+    --qtl_manifest qtl_manifest.csv \
+    --outdir results \
+    --email you@mail.com \
+    -params-file params.yaml
 ```
 
 > [!WARNING]
