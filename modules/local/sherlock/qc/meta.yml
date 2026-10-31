@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "sherlock_qc"
+description: QC, liftover and harmonisation of GWAS summary statistics
+keywords:
+  - gwas
+  - summary statistics
+  - quality control
+  - liftover
+tools:
+  - "sherlock-tools":
+      description: "Python library behind the nf-core/sherlock pipeline"
+      homepage: "https://github.com/guillermocomesanacimadevila/sherlock"
+      licence: ["MIT"]
+      identifier: ""
+
+input:
+  - - meta:
+        type: map
+        description: |
+          Trait info from the samplesheet, e.g. [ id:'AD', build:'GRCh38', trait_type:'cc',
+          n_cases:..., n_controls:..., snp_col:'SNP', chr_col:'CHR', ... ]
+    - sumstats:
+        type: file
+        description: GWAS summary statistics (tab-separated, can be gzipped)
+        pattern: "*.{tsv,txt,tsv.gz,txt.gz}"
+  - chain_file:
+      type: file
+      description: UCSC liftover chain file (optional, only if build != target build)
+      pattern: "*.{chain,over.chain,chain.gz}"
+
+output:
+  parquet:
+    - - meta:
+          type: map
+          description: Trait info from the samplesheet
+      - "*.qc.parquet":
+          type: file
+          description: QC'd sumstats (SNP CHR BP A1 A2 BETA SE P N [FRQ] [INFO])
+          pattern: "*.qc.parquet"
+
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process the versions were collected from
+      - sherlock-tools:
+          type: string
+          description: The tool name
+      - "pip show sherlock-tools | sed -n 's/^Version: //p'":
+          type: eval
+          description: The command used to get the version
+
+authors:
+  - "@guillermocomesanacimadevila"
+maintainers:
+  - "@guillermocomesanacimadevila"

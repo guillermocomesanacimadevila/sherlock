@@ -10,6 +10,16 @@
 */
 
 /*
+nextflow run nf-core/sherlock \
+    -profile docker \
+    --input gwas_pairs.csv \
+    --qtl_manifest qtls.csv \
+    --outdir results \
+    --email you@mail.com \
+    -params-file params.yaml   
+*/
+
+/*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     IMPORT FUNCTIONS / MODULES / SUBWORKFLOWS / WORKFLOWS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

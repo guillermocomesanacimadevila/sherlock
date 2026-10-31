@@ -2,32 +2,95 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://raw.githubusercontent.com/nf-core/sherlock/master/assets/schema_input.json",
     "title": "nf-core/sherlock pipeline - params.input schema",
-    "description": "Schema for the file provided with params.input",
+    "description": "GWAS samplesheet: one row per trait, exactly two rows (one trait pair)",
     "type": "array",
+    "minItems": 2,
+    "maxItems": 2,
+    "uniqueEntries": ["trait"],
     "items": {
         "type": "object",
         "properties": {
-            "sample": {
+            "trait": {
                 "type": "string",
-                "pattern": "^\\S+$",
-                "errorMessage": "Sample name must be provided and cannot contain spaces",
+                "pattern": "^[^\\s_]+$",
+                "errorMessage": "Trait name must be given and cannot contain spaces or '_'",
                 "meta": ["id"]
             },
-            "fastq_1": {
+            "sumstats": {
                 "type": "string",
                 "format": "file-path",
                 "exists": true,
-                "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?q\\.gz$",
-                "errorMessage": "FastQ file for reads 1 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+                "pattern": "^\\S+\\.(tsv|txt)(\\.gz)?$",
+                "errorMessage": "Sumstats must be a .tsv/.txt (optionally .gz) file with no spaces in the path"
             },
-            "fastq_2": {
+            "build": {
                 "type": "string",
-                "format": "file-path",
-                "exists": true,
-                "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?q\\.gz$",
-                "errorMessage": "FastQ file for reads 2 cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
-            }
+                "enum": ["GRCh37", "GRCh38"],
+                "errorMessage": "Genome build must be GRCh37 or GRCh38",
+                "meta": ["build"]
+            },
+            "trait_type": {
+                "type": "string",
+                "enum": ["quant", "cc"],
+                "errorMessage": "Trait type must be 'quant' (quantitative) or 'cc' (case/control)",
+                "meta": ["trait_type"]
+            },
+            "n": {
+                "type": "integer",
+                "minimum": 1,
+                "errorMessage": "n must be a whole number >= 1",
+                "meta": ["n"]
+            },
+            "n_cases": {
+                "type": "integer",
+                "minimum": 1,
+                "errorMessage": "n_cases must be a whole number >= 1",
+                "meta": ["n_cases"]
+            },
+            "n_controls": {
+                "type": "integer",
+                "minimum": 1,
+                "errorMessage": "n_controls must be a whole number >= 1",
+                "meta": ["n_controls"]
+            },
+            "pop_prev": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "exclusiveMaximum": 1,
+                "errorMessage": "pop_prev must be between 0 and 1",
+                "meta": ["pop_prev"]
+            },
+            "snp_col":  { "type": "string", "meta": ["snp_col"] },
+            "chr_col":  { "type": "string", "meta": ["chr_col"] },
+            "pos_col":  { "type": "string", "meta": ["pos_col"] },
+            "a1_col":   { "type": "string", "meta": ["a1_col"] },
+            "a2_col":   { "type": "string", "meta": ["a2_col"] },
+            "beta_col": { "type": "string", "meta": ["beta_col"] },
+            "se_col":   { "type": "string", "meta": ["se_col"] },
+            "pval_col": { "type": "string", "meta": ["pval_col"] },
+            "freq_col": { "type": "string", "meta": ["freq_col"] },
+            "info_col": { "type": "string", "meta": ["info_col"] },
+            "n_col":    { "type": "string", "meta": ["n_col"] }
         },
-        "required": ["sample", "fastq_1"]
+        "required": [
+            "trait", "sumstats", "build", "trait_type",
+            "snp_col", "chr_col", "pos_col", "a1_col", "a2_col", "beta_col", "se_col", "pval_col"
+        ],
+        "allOf": [
+            {
+                "if": { "properties": { "trait_type": { "const": "quant" } } },
+                "then": {
+                    "anyOf": [ { "required": ["n"] }, { "required": ["n_col"] } ],
+                    "errorMessage": "quant traits need either n or n_col"
+                }
+            },
+            {
+                "if": { "properties": { "trait_type": { "const": "cc" } } },
+                "then": {
+                    "anyOf": [ { "required": ["n_cases", "n_controls"] }, { "required": ["n_col"] } ],
+                    "errorMessage": "cc traits need n_cases + n_controls, or n_col"
+                }
+            }
+        ]
     }
 }

@@ -19,9 +19,25 @@
                     "schema": "assets/schema_input.json",
                     "mimetype": "text/csv",
                     "pattern": "^\\S+\\.csv$",
-                    "description": "Path to comma-separated file containing information about the samples in the experiment.",
-                    "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row. See [usage docs](https://nf-co.re/sherlock/usage#samplesheet-input).",
+                    "description": "Path to the GWAS pair CSV (two rows, one per trait).",
+                    "help_text": "A comma-separated file with a header row and exactly two rows, one per trait: trait, sumstats, build, trait_type, sample size (n, or n_cases + n_controls, or n_col) and the column names in the sumstats file. See [usage docs](https://nf-co.re/sherlock/usage#samplesheet-input).",
                     "fa_icon": "fas fa-file-csv"
+                },
+                "qtl_manifest": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$",
+                    "description": "Path to the xQTL manifest CSV (one row per QTL dataset).",
+                    "fa_icon": "fas fa-file-csv"
+                },
+                "steps": {
+                    "type": "string",
+                    "default": "qc",
+                    "pattern": "^((qc|ldsc|loci|coloc|smr|report)(,|$))+$",
+                    "description": "Comma-separated list of steps to run, e.g. 'qc,ldsc'. QC always runs.",
+                    "fa_icon": "fas fa-list-ol"
                 },
                 "outdir": {
                     "type": "string",
@@ -35,6 +51,75 @@
                     "fa_icon": "fas fa-envelope",
                     "help_text": "Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits. If set in your user config file (`~/.nextflow/config`) then you don't need to specify this on the command line for every run.",
                     "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$"
+                }
+            }
+        },
+        "reference_options": {
+            "title": "Reference options",
+            "type": "object",
+            "fa_icon": "fas fa-book",
+            "description": "Ancestry and reference files.",
+            "properties": {
+                "ancestry": {
+                    "type": "string",
+                    "default": "EUR",
+                    "enum": ["EUR", "EAS", "AFR", "AMR", "SAS"],
+                    "description": "Population of both GWAS. The LD reference panel must match it.",
+                    "fa_icon": "fas fa-globe"
+                },
+                "ref_panel": {
+                    "type": "string",
+                    "description": "PLINK prefix of the LD reference panel (path without .bed/.bim/.fam).",
+                    "fa_icon": "fas fa-database"
+                },
+                "chain_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "UCSC liftover chain file. Only needed if a GWAS build differs from target_build.",
+                    "fa_icon": "fas fa-link"
+                }
+            }
+        },
+        "qc_options": {
+            "title": "QC options",
+            "type": "object",
+            "fa_icon": "fas fa-filter",
+            "description": "Settings for QC and liftover of the GWAS summary statistics.",
+            "properties": {
+                "target_build": {
+                    "type": "string",
+                    "default": "GRCh38",
+                    "enum": ["GRCh37", "GRCh38"],
+                    "description": "Genome build that both GWAS are lifted to.",
+                    "fa_icon": "fas fa-dna"
+                },
+                "maf_thresh": {
+                    "type": "number",
+                    "default": 0.01,
+                    "minimum": 0,
+                    "maximum": 0.5,
+                    "description": "Remove SNPs with minor allele frequency below this value.",
+                    "fa_icon": "fas fa-sliders-h"
+                },
+                "info_thresh": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Remove SNPs with imputation INFO below this value. Leave empty for no INFO filter.",
+                    "fa_icon": "fas fa-sliders-h"
+                },
+                "drop_mhc": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Remove the MHC region (chr6:25-34 Mb).",
+                    "fa_icon": "fas fa-cut"
+                },
+                "drop_apoe": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Remove the APOE region (chr19).",
+                    "fa_icon": "fas fa-cut"
                 }
             }
         },
@@ -166,6 +251,12 @@
     "allOf": [
         {
             "$ref": "#/$defs/input_output_options"
+        },
+        {
+            "$ref": "#/$defs/reference_options"
+        },
+        {
+            "$ref": "#/$defs/qc_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"

@@ -229,6 +229,11 @@ def test_liftover(make_qc, monkeypatch):
     assert df["MarkerName"].to_list() == ["rs1"]  # rs2 no hit, rs15 changed chr
     assert df["Pos"].item() == 1100
 
+def test_liftover_missing_chain_raises(make_qc):
+    qc = make_qc(genome_build="GRCh37", chain_file=None)
+    with pytest.raises(ValueError):
+        qc._liftover()
+
 # full run
 def test_run(make_qc):
     df = make_qc().run()

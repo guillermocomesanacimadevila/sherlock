@@ -252,6 +252,13 @@ class QualityControl:
             print(f"Skipping liftover: already {self.target_genome_build}")
             return self.sumstats
 
+        # different build -> chain file needed
+        if self.chain_file is None:
+            raise ValueError(
+                f"GWAS is {self.genome_build} but target is {self.target_genome_build}: "
+                f"a chain file is needed for liftover (set chain_file in params.yaml)"
+            )
+
         converter = ChainFile(self.chain_file, one_based=True)
         chrs = self.sumstats[self.chr_col].to_list()
         poss = self.sumstats[self.pos_col].to_list()

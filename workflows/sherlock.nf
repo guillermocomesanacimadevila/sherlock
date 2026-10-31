@@ -6,6 +6,7 @@
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_sherlock_pipeline'
+include { SHERLOCK_QC            } from '../modules/local/sherlock/qc'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -22,6 +23,41 @@ workflow SHERLOCK {
     main:
 
     def ch_versions = channel.empty()
+
+    //
+    // QC
+    //
+
+    // check liftover setup before running
+    if (params.chain_file) {
+
+        def chain_name = file(params.chain_file).name
+        def expected   = 'ToHg38'
+        if (params.target_build == 'GRCh37') {
+            expected = 'ToHg19'
+        }
+
+        if (!chain_name.contains(expected)) {
+            log.warn "chain_file '${chain_name}' doesn't look like a liftover to ${params.target_build} (expected '*${expected}*'). Check it's the right direction."
+        }
+    }
+
+    ch_samplesheet
+        .map { meta, sumstats  ->
+            if (meta.build != params.target_build && !params.chain_file) {
+                error("${meta.id} is ${meta.build} but target_build is ${params.target_build}: set chain_file in params.yaml for liftover.")
+            }
+            [ meta, sumstats ]
+        }
+        .set { ch_gwas }
+
+    // chain file for the module: [] = none
+    def ch_chain = channel.value([])
+    if (params.chain_file) {
+        ch_chain = channel.value(file(params.chain_file, checkIfExists: true))
+    }
+
+    SHERLOCK_QC(ch_gwas, ch_chain)
 
     //
     // Collate and save software versions
@@ -43,7 +79,7 @@ workflow SHERLOCK {
             "${process}:\n${tool_versions.join('\n')}"
         }
 
-    def ch_collated_versions = softwareVersionsToYAML(ch_versions.mix(topic_versions.versions_file))
+    softwareVersionsToYAML(ch_versions.mix(topic_versions.versions_file))
         .mix(topic_versions_string)
         .collectFile(
             storeDir: "${outdir}/pipeline_info",
@@ -52,6 +88,7 @@ workflow SHERLOCK {
             newLine: true
         )
     emit:
+    qc             = SHERLOCK_QC.out.parquet     // channel: [ meta, path(*.qc.parquet) ]
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
 
