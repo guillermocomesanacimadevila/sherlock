@@ -79,11 +79,13 @@ For more details about the output files and reports, please refer to the
 
 ## Credits
 
-nf-core/sherlock was originally written by Guillermo Comesaña Cimadevila.
+nf-core/sherlock is being developed by:
 
-We thank the following people for their extensive assistance in the development of this pipeline:
+Guillermo Comesaña Cimadevila<sup>1</sup>, Alexey Shatunov<sup>1</sup>, Dominic Ng<sup>2</sup>, Anna McKeever<sup>3</sup>, Ganna Leonenko<sup>1</sup>, Valentina Escott-Price<sup>1</sup>
 
-<!-- TODO nf-core: If applicable, make list of people who have also contributed -->
+<sup>1</sup> UK Dementia Research Institute, Cardiff University, UK  
+<sup>2</sup> Centre for Clinical Brain Sciences, University of Edinburgh, UK  
+<sup>3</sup> Department of Psychiatry, University of Cambridge, UK
 
 ## Contributions and Support
 
