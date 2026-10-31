@@ -1,0 +1,3 @@
+trait,sumstats,build,trait_type,n,n_cases,n_controls,pop_prev,snp_col,chr_col,pos_col,a1_col,a2_col,beta_col,se_col,pval_col,freq_col,info_col,n_col
+AD,/path/to/AD.tsv,GRCh38,cc,,,,0.05,SNP,CHR,BP,A1,A2,BETA,SE,P,FRQ,,N
+SCZ,/path/to/SCZ.tsv,GRCh37,cc,,,,0.01,SNP,CHR,POS,A1,A2,BETA,SE,P,FRQ,INFO,N

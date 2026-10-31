@@ -1,0 +1,23 @@
+# Example settings for nf-core/sherlock
+# Run from the repo root:
+#   nextflow run . -profile docker -params-file projects/example/params.yaml
+# Copy this folder (e.g. to projects/my_run/) and replace the /path/to/ values with your own files.
+
+# inputs / outputs
+input: projects/example/gwas_pair.csv
+outdir: projects/example/results
+
+# steps to run (QC always runs)
+steps: qc
+
+# QC
+target_build: GRCh38
+maf_thresh: 0.01
+info_thresh: 0.8
+drop_mhc: true
+drop_apoe: false
+
+# references
+ancestry: EUR                                   # population of both GWAS; ref_panel must match
+ref_panel: /path/to/1000G.EUR.QC.ALL            # PLINK prefix (.bed/.bim/.fam)
+chain_file: /path/to/hg19ToHg38.over.chain      # needed because SCZ is GRCh37 and target_build is GRCh38

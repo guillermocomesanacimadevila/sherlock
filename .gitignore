@@ -11,4 +11,6 @@ null/
 .lineage/
 .nf-test/
 .nf-test.log
-projects/
+projects/*
+!projects/example/
+projects/example/results/
