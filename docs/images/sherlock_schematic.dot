@@ -1,0 +1,143 @@
+digraph sherlock {
+    graph [rankdir=TB, compound=true, newrank=true, fontname="Helvetica Neue", bgcolor="white",
+           nodesep=0.35, ranksep=0.55, pad=0.5, splines=spline,
+           label=<<b>nf-core/sherlock</b><br/> >,
+           labelloc=t, fontsize=26, fontcolor="#1F2937"];
+    node  [shape=box, style="rounded,filled", fontname="Helvetica Neue", fontsize=13, fontcolor="#1F2937",
+           penwidth=1.4, height=0.42, width=1.3, margin="0.15,0.06"];
+    edge  [color="#9CA3AF", penwidth=1.6, arrowsize=0.8];
+
+    // ---------- Inputs ----------
+    subgraph cluster_inputs {
+        label="Inputs"; style="rounded,filled"; color="#BFDBFE"; fillcolor="#EFF6FF";
+        fontname="Helvetica Neue Bold"; fontsize=14; fontcolor="#1E3A8A";
+        node [fillcolor="white", color="#3B82F6"];
+        gwas_a [label="GWAS trait A"];
+        gwas_b [label="GWAS trait B"];
+        xqtl   [label="xQTL panel\n(CSV)"];
+        params [label="params.yaml", shape=note, style="filled"];
+    }
+
+    // ---------- QC ----------
+    subgraph cluster_qc {
+        label="QC + liftover"; style="rounded,filled"; color="#BBF7D0"; fillcolor="#F0FDF4";
+        fontname="Helvetica Neue Bold"; fontsize=14; fontcolor="#14532D";
+        node [fillcolor="white", color="#22C55E"];
+        polars [label="polars"];
+    }
+
+    // ---------- Shared genetics ----------
+    subgraph cluster_global {
+        label="Global genetic correlation"; style="rounded,filled"; color="#FDE68A"; fillcolor="#FFFBEB";
+        fontname="Helvetica Neue Bold"; fontsize=14; fontcolor="#78350F";
+        node [fillcolor="white", color="#F59E0B"];
+        ldsc [label="LDSC"]; hdl [label="HDL"];
+    }
+    subgraph cluster_local {
+        label="Local genetic correlation"; style="rounded,filled"; color="#FDE68A"; fillcolor="#FFFBEB";
+        fontname="Helvetica Neue Bold"; fontsize=14; fontcolor="#78350F";
+        node [fillcolor="white", color="#F59E0B"];
+        lava [label="LAVA"]; hdll [label="HDL-L"];
+    }
+    subgraph cluster_pleio {
+        label="Pleiotropy"; style="rounded,filled"; color="#FDE68A"; fillcolor="#FFFBEB";
+        fontname="Helvetica Neue Bold"; fontsize=14; fontcolor="#78350F";
+        node [fillcolor="white", color="#F59E0B"];
+        conjfdr [label="conjFDR"]; pleio [label="PLEIO"];
+    }
+
+    // ---------- Localisation ----------
+    subgraph cluster_loci {
+        label="Locus definition + gene mapping"; style="rounded,filled"; color="#FED7AA"; fillcolor="#FFF7ED";
+        fontname="Helvetica Neue Bold"; fontsize=14; fontcolor="#7C2D12";
+        node [fillcolor="white", color="#F97316"];
+        plink [label="PLINK"]; fuma [label="FUMA files", style="rounded,dashed,filled"];
+    }
+    subgraph cluster_coloc {
+        label="Colocalisation"; style="rounded,filled"; color="#FED7AA"; fillcolor="#FFF7ED";
+        fontname="Helvetica Neue Bold"; fontsize=14; fontcolor="#7C2D12";
+        node [fillcolor="white", color="#F97316"];
+        coloc [label="coloc"]; pwcoco [label="PWCoCo"];
+    }
+    subgraph cluster_fm {
+        label="Fine-mapping"; style="rounded,filled"; color="#FED7AA"; fillcolor="#FFF7ED";
+        fontname="Helvetica Neue Bold"; fontsize=14; fontcolor="#7C2D12";
+        node [fillcolor="white", color="#F97316"];
+        susie [label="SuSiE"]; finemap [label="FINEMAP"];
+    }
+    subgraph cluster_magma {
+        label="Gene-set analysis"; style="rounded,filled"; color="#FED7AA"; fillcolor="#FFF7ED";
+        fontname="Helvetica Neue Bold"; fontsize=14; fontcolor="#7C2D12";
+        node [fillcolor="white", color="#F97316"];
+        magma [label="MAGMA"];
+    }
+
+    // ---------- xQTL integration ----------
+    subgraph cluster_smr {
+        label="xQTL panel scan"; style="rounded,filled"; color="#DDD6FE"; fillcolor="#F5F3FF";
+        fontname="Helvetica Neue Bold"; fontsize=14; fontcolor="#4C1D95";
+        node [fillcolor="white", color="#8B5CF6"];
+        smr [label="SMR"]; heidi [label="HEIDI"];
+    }
+    subgraph cluster_multi {
+        label="Both traits + target xQTL"; style="rounded,filled"; color="#DDD6FE"; fillcolor="#F5F3FF";
+        fontname="Helvetica Neue Bold"; fontsize=14; fontcolor="#4C1D95";
+        node [fillcolor="white", color="#8B5CF6"];
+        hyprcoloc [label="HyPrColoc"]; pwcoco2 [label="PWCoCo"];
+    }
+    subgraph cluster_qtlfm {
+        label="Fine-map target xQTL vs GWAS"; style="rounded,filled"; color="#DDD6FE"; fillcolor="#F5F3FF";
+        fontname="Helvetica Neue Bold"; fontsize=14; fontcolor="#4C1D95";
+        node [fillcolor="white", color="#8B5CF6"];
+        susie2 [label="SuSiE"]; finemap2 [label="FINEMAP"];
+    }
+
+    // ---------- Druggability + report ----------
+    subgraph cluster_drug {
+        label="Druggability"; style="rounded,filled"; color="#FBCFE8"; fillcolor="#FDF2F8";
+        fontname="Helvetica Neue Bold"; fontsize=14; fontcolor="#831843";
+        node [fillcolor="white", color="#EC4899"];
+        pharos [label="Pharos"]; chembl [label="ChEMBL"];
+    }
+    subgraph cluster_report {
+        label="Report"; style="rounded,filled"; color="#BFDBFE"; fillcolor="#EFF6FF";
+        fontname="Helvetica Neue Bold"; fontsize=14; fontcolor="#1E3A8A";
+        node [fillcolor="white", color="#3B82F6"];
+        report [label="HTML report"];
+    }
+
+    // ---------- Flow (cluster to cluster) ----------
+    gwas_b  -> polars  [ltail=cluster_inputs, lhead=cluster_qc];
+    polars  -> hdl     [ltail=cluster_qc, lhead=cluster_global];
+    polars  -> lava    [ltail=cluster_qc, lhead=cluster_local];
+    polars  -> conjfdr [ltail=cluster_qc, lhead=cluster_pleio];
+    hdll    -> plink   [ltail=cluster_local, lhead=cluster_loci];
+    conjfdr -> plink   [ltail=cluster_pleio, lhead=cluster_loci];
+    plink   -> coloc   [ltail=cluster_loci, lhead=cluster_coloc];
+    plink   -> susie   [ltail=cluster_loci, lhead=cluster_fm];
+    plink   -> magma   [ltail=cluster_loci, lhead=cluster_magma];
+    pwcoco  -> smr     [ltail=cluster_coloc, lhead=cluster_smr];
+    finemap -> smr     [ltail=cluster_fm, lhead=cluster_smr];
+    magma   -> heidi   [ltail=cluster_magma, lhead=cluster_smr];
+    heidi   -> hyprcoloc [ltail=cluster_smr, lhead=cluster_multi];
+    pwcoco2 -> susie2  [ltail=cluster_multi, lhead=cluster_qtlfm];
+    finemap2 -> pharos [ltail=cluster_qtlfm, lhead=cluster_drug];
+    chembl  -> report  [ltail=cluster_drug, lhead=cluster_report];
+    ldsc    -> report  [ltail=cluster_global, lhead=cluster_report, style=dashed];
+
+    // keep tools in each box side by side
+    {rank=same; gwas_a gwas_b xqtl params}
+    {rank=same; ldsc hdl lava hdll conjfdr pleio}
+    {rank=same; coloc pwcoco susie finemap magma}
+    {rank=same; smr heidi}
+    {rank=same; hyprcoloc pwcoco2}
+    {rank=same; susie2 finemap2}
+    {rank=same; pharos chembl}
+    gwas_a -> gwas_b -> xqtl -> params [style=invis];
+    ldsc -> hdl [style=invis]; lava -> hdll [style=invis]; conjfdr -> pleio [style=invis];
+    {rank=same; plink fuma}
+    plink -> fuma [style=invis];
+    coloc -> pwcoco [style=invis]; susie -> finemap [style=invis];
+    smr -> heidi [style=invis]; hyprcoloc -> pwcoco2 [style=invis];
+    susie2 -> finemap2 [style=invis]; pharos -> chembl [style=invis];
+}
