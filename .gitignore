@@ -14,3 +14,15 @@ null/
 projects/*
 !projects/example/
 projects/example/results/
+.sendmail_tmp.html
+
+# personal / sensitive (never commit)
+.env
+*.env
+.pypirc
+.netrc
+*.pem
+*.key
+secrets/
+dev.config
+*.local.config
