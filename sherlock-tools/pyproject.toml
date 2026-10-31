@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sherlock-tools"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Python library behind the nf-core/sherlock pipeline"
 readme = "README.md"
 license = "MIT"
@@ -16,9 +16,8 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "polars==1.43.0",
-    "liftover==1.3.3",
-    "requests==2.34.2",
+    "polars>=1.0",
+    "liftover>=1.3",
 ]
 
 [project.optional-dependencies]
@@ -39,12 +38,13 @@ Issues = "https://github.com/guillermocomesanacimadevila/sherlock/issues"
 packages = ["src/sherlock_tools"]
 
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-ra"
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

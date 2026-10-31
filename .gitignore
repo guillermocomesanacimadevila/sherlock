@@ -4,6 +4,7 @@ data/
 results/
 .DS_Store
 testing/
+dist/
 testing*
 *.pyc
 null/
