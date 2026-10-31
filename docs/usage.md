@@ -194,6 +194,104 @@ See the main [Nextflow documentation](https://www.nextflow.io/docs/latest/config
 
 If you have any questions or issues please send us a message on [Slack](https://nf-co.re/join/slack) on the [`#configs` channel](https://nfcore.slack.com/channels/configs).
 
+## Email notifications
+
+You can get an email when a run finishes. How to set this up depends on where you run the pipeline.
+
+### On a cluster (HPC)
+
+Most clusters can send email already. Add `--email` to your command:
+
+```bash
+nextflow run nf-core/sherlock -profile singularity --email you@uni.ac.uk -params-file params.yaml
+```
+
+If the email doesn't arrive, check your spam folder, or ask your HPC team whether jobs can send email.
+
+### On a laptop or desktop
+
+Laptops can't send email by themselves, so `--email` won't work there. Instead, use Nextflow's own notification option (`-N`) with your own Gmail account. You only do steps 1–4 once. Your password is stored by Nextflow on your computer and never goes into the pipeline folder.
+
+**Step 1: Create a Gmail app password**
+
+1. Turn on 2-Step Verification for your Google account: <https://myaccount.google.com/security>
+2. Go to <https://myaccount.google.com/apppasswords>, type a name (e.g. `nextflow`) and click **Create**.
+3. Copy the 16-character password. Google only shows it once.
+
+**Step 2: Store the password in Nextflow**
+
+Run these three commands. When asked, paste the password and press Enter (nothing will show while you paste):
+
+```bash
+read -s "P?App password: "
+nextflow secrets set SMTP_PASSWORD "$P"
+unset P
+```
+
+This keeps the password off your screen and out of your shell history. Check it was saved (this shows the name only):
+
+```bash
+nextflow secrets list
+```
+
+**Step 3: Add your mail settings**
+
+Open your personal Nextflow config file (it is created if it doesn't exist):
+
+```bash
+nano ~/.nextflow/config
+```
+
+Paste the block below and replace `you@gmail.com` with your Gmail address in **both** places:
+
+```groovy
+mail {
+    from = 'you@gmail.com'
+    smtp.host = 'smtp.gmail.com'
+    smtp.port = 587
+    smtp.user = 'you@gmail.com'
+    smtp.password = secrets.SMTP_PASSWORD
+    smtp.auth = true
+    smtp.starttls.enable = true
+    smtp.starttls.required = true
+    smtp.ssl.protocols = 'TLSv1.2'
+}
+```
+
+Save with `Ctrl+O` then `Enter`, and exit with `Ctrl+X`. Leave the `secrets.SMTP_PASSWORD` line as it is: it tells Nextflow to use the password from Step 2.
+
+**Step 4: Test it**
+
+```bash
+nextflow run hello -N you@uni.ac.uk
+```
+
+An email should arrive within a minute (check your spam folder too). You may see `WARN: Unrecognized config option 'mail.smtp...'`. These warnings are expected and can be ignored.
+
+**Step 5: Use it with sherlock**
+
+Add `-N` (one dash) to your normal command:
+
+```bash
+nextflow run nf-core/sherlock -profile docker -params-file params.yaml -N you@uni.ac.uk
+```
+
+`-N` sends a short summary of the run. The full run report is always saved in `<outdir>/pipeline_info/`.
+
+### If the email doesn't arrive
+
+Look for the reason in the log:
+
+```bash
+grep -i -A3 "mail" .nextflow.log
+```
+
+| Message in the log                | What to do                                                                                    |
+| --------------------------------- | --------------------------------------------------------------------------------------------- |
+| `Could not convert socket to TLS` | Make sure the `smtp.ssl.protocols = 'TLSv1.2'` line is in `~/.nextflow/config`.               |
+| `Authentication failed` / `535`   | The app password or the `smtp.user` address is wrong. Redo Steps 1–2 and check `smtp.user`.   |
+| Nothing about mail                | Check you used `-N` (one dash), not `--email`, on a laptop.                                   |
+
 ## Running in the background
 
 Nextflow handles job submissions and supervises the running jobs. The Nextflow process must run until the pipeline is finished.
