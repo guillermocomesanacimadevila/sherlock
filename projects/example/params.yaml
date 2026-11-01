@@ -1,9 +1,9 @@
 # Example settings for nf-core/sherlock
 # Run from the repo root:
 # nextflow run . -profile docker \
-#     --input projects/test/gwas_pair.csv \
-#     --outdir projects/test/results \
-#     -params-file projects/test/params.yaml
+#     --input projects/example/gwas_pair.csv \
+#     --outdir projects/example/results \
+#     -params-file projects/example/params.yaml
 # Copy this folder (e.g. to projects/my_run/) and replace the /path/to/ values with your own files.
 
 # inputs / outputs
@@ -14,11 +14,11 @@ outdir: projects/example/results
 steps: qc
 
 # QC
-target_build: GRCh38
-maf_thresh: 0.01
-info_thresh: 0.8
-drop_mhc: true
-drop_apoe: false
+target_build: GRCh38                            # build every GWAS is lifted to (GRCh37 or GRCh38)
+maf_thresh: 0.01                                # drop SNPs with minor allele frequency below this
+info_thresh: 0.8                                # drop SNPs with INFO below this (only used if info_col is set)
+drop_mhc: true                                  # remove the MHC region (chr6, ~25-34 Mb)
+drop_apoe: false                                # remove the APOE region (chr19, ~1 Mb either side of APOE)
 
 # references
 ancestry: EUR                                   # population of both GWAS; ref_panel must match
