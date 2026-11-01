@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import gzip
 
 import polars as pl
 from sherlock_tools.preprocessing import QualityControl
@@ -13,12 +14,12 @@ def main():
     - Reads args from YAML file in params/ or inputs/
     - Reads X-separated sumstats (1 by 1) -> open as pl.DataFrame
     - Parse inputs as QC args into run()
-    - Save as .parquet in out/
+    - Save as .tsv.gz in out/
     """
 
     parser = argparse.ArgumentParser(description="sherlock GWAS/xQTL QC")
     parser.add_argument("--sumstats", required=True, help="input summary statistics (.tsv / .tsv.gz)")
-    parser.add_argument("--out", required=True, help="output QC'd sumstats (.parquet)")
+    parser.add_argument("--out", required=True, help="output QC'd sumstats (.tsv.gz)")
     parser.add_argument("--sep", default="\t", help="input separator")
     parser.add_argument("--snp-col", required=True)
     parser.add_argument("--chr-col", required=True)
@@ -79,8 +80,10 @@ def main():
     )
 
     df = qc.run()
-    df.write_parquet(args.out)
+    with gzip.open(args.out, "wb", compresslevel=6) as f:
+        df.write_csv(f, separator="\t")
     print(f"Written: {args.out}")
+
 
 if __name__ == "__main__":
     main()
