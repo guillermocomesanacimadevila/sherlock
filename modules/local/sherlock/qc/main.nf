@@ -11,7 +11,7 @@ process SHERLOCK_QC {
 
     output:
     // QC'd sumstats
-    tuple val(meta), path("*.qc.parquet"), emit: parquet
+    tuple val(meta), path("*.qc.tsv.gz"), emit: sumstats
 
     // sherlock-tools version -> pipeline_info/nf_core_sherlock_software_versions.yml
     tuple val("${task.process}"),
@@ -52,7 +52,7 @@ process SHERLOCK_QC {
     """
     sherlockQC.py \\
         --sumstats      ${sumstats} \\
-        --out           ${prefix}.qc.parquet \\
+        --out           ${prefix}.qc.tsv.gz \\
         --trait-type    ${meta.trait_type} \\
         --genome-build  ${meta.build} \\
         --snp-col       ${meta.snp_col} \\
@@ -74,6 +74,6 @@ process SHERLOCK_QC {
         prefix = task.ext.prefix
     }
     """
-    touch ${prefix}.qc.parquet
+    echo "" | gzip > ${prefix}.qc.tsv.gz
     """
 }

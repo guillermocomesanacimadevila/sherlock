@@ -88,7 +88,7 @@ workflow SHERLOCK {
             newLine: true
         )
     emit:
-    qc             = SHERLOCK_QC.out.parquet     // channel: [ meta, path(*.qc.parquet) ]
+    qc             = SHERLOCK_QC.out.sumstats    // channel: [ meta, path(*.qc.tsv.gz) ]
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
 

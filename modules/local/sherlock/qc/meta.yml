@@ -29,14 +29,14 @@ input:
       pattern: "*.{chain,over.chain,chain.gz}"
 
 output:
-  parquet:
+  sumstats:
     - - meta:
           type: map
           description: Trait info from the samplesheet
-      - "*.qc.parquet":
+      - "*.qc.tsv.gz":
           type: file
-          description: QC'd sumstats (SNP CHR BP A1 A2 BETA SE P N [FRQ] [INFO])
-          pattern: "*.qc.parquet"
+          description: QC'd sumstats, gzipped tab-separated (SNP CHR BP A1 A2 BETA SE P N [FRQ] [INFO])
+          pattern: "*.qc.tsv.gz"
 
 topics:
   versions:
