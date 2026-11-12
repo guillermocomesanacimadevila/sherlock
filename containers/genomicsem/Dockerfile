@@ -19,7 +19,7 @@ RUN micromamba install -y -n base -c conda-forge \
         r-plyr r-e1071 r-readr r-gdata r-lavaan \
         r-doparallel r-foreach r-iterators r-data.table \
         r-stringr r-splitstackshape r-matrix r-r.utils \
-        r-dplyr r-rcpp r-mgsub r-sfsmisc \
+        r-dplyr r-rcpp r-mgsub r-sfsmisc r-optparse \
     && micromamba clean -a -y
 
 ENV PATH=/opt/conda/bin:$PATH
@@ -31,4 +31,4 @@ RUN curl -sL https://github.com/GenomicSEM/GenomicSEM/archive/${GENOMICSEM_COMMI
     && rm /tmp/gsem.tar.gz
 
 # verify!!!!!!
-RUN Rscript -e 'library(GenomicSEM)'
+RUN Rscript -e 'library(GenomicSEM); library(optparse)'
