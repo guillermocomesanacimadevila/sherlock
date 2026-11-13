@@ -4,15 +4,21 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sherlock-tools"
-version = "0.1.1"
-description = "Python library behind the nf-core/sherlock pipeline"
+version = "0.1.2"
+description = "QC, liftover and harmonisation of GWAS summary statistics for the nf-core/sherlock pipeline"
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "Guillermo Comesaña Cimadevila", email = "ComesanaCimadevilaG@cardiff.ac.uk" }]
 requires-python = ">=3.12"
+keywords = ["gwas", "summary statistics", "quality control", "liftover", "genetics", "nextflow", "nf-core", "polars"]
 classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
@@ -32,6 +38,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/guillermocomesanacimadevila/sherlock"
+Source = "https://github.com/guillermocomesanacimadevila/sherlock/tree/dev/sherlock-tools"
 Issues = "https://github.com/guillermocomesanacimadevila/sherlock/issues"
 
 [tool.hatch.build.targets.wheel]
