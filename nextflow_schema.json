@@ -87,6 +87,14 @@
                     "description": "HapMap3 SNP list (e.g. w_hm3.snplist) used by LDSC munge to keep and align SNPs.",
                     "help_text": "Needed when the rg step runs. The standard file comes with the LDSC reference data.",
                     "fa_icon": "fas fa-list"
+                },
+                "ldsc_ref": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "exists": true,
+                    "description": "LDSC LD score folder (e.g. eur_w_ld_chr/) with <chr>.l2.ldscore.gz files.",
+                    "help_text": "Needed when the rg step runs. Used for both LD scores and regression weights. Must match the ancestry of both GWAS.",
+                    "fa_icon": "fas fa-folder"
                 }
             }
         },

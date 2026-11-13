@@ -8,6 +8,7 @@ include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pi
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_sherlock_pipeline'
 include { SHERLOCK_QC            } from '../modules/local/sherlock/qc'
 include { SHERLOCK_MUNGE         } from '../modules/local/sherlock/munge'
+include { SHERLOCK_LDSC          } from '../modules/local/sherlock/ldsc'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -66,19 +67,33 @@ workflow SHERLOCK {
 
     def steps = params.steps.tokenize(',')
 
-    // munged sumstats, stays empty if rg isn't run
+    // munged sumstats + LDSC results, stay empty if rg isn't run
     def ch_munged = channel.empty()
+    def ch_ldsc   = channel.empty()
 
     if (steps.contains('rg')) {
 
-        // hm3 is required for munge
+        // hm3 + ldsc_ref are required for rg
         if (!params.hm3) {
             error("--steps includes 'rg' but hm3 is not set: add the HapMap3 SNP list (w_hm3.snplist) to params.yaml.")
         }
-        def ch_hm3 = channel.value(file(params.hm3, checkIfExists: true))
+        if (!params.ldsc_ref) {
+            error("--steps includes 'rg' but ldsc_ref is not set: add the LD score folder (eur_w_ld_chr/) to params.yaml.")
+        }
+        def ch_hm3      = channel.value(file(params.hm3, checkIfExists: true))
+        def ch_ldsc_ref = channel.value(file(params.ldsc_ref, checkIfExists: true))
 
         SHERLOCK_MUNGE(SHERLOCK_QC.out.sumstats, ch_hm3)
         ch_munged = SHERLOCK_MUNGE.out.sumstats
+
+        // both traits into one tuple, sorted by name: [ meta1, sumstats1, meta2, sumstats2 ] (AD, SCZ)
+        ch_munged
+            .toSortedList { a, b -> a[0].id <=> b[0].id }
+            .map { traits -> traits[0] + traits[1] }
+            .set { ch_pair }
+
+        SHERLOCK_LDSC(ch_pair, ch_ldsc_ref)
+        ch_ldsc = SHERLOCK_LDSC.out.results
     }
 
     //
@@ -112,6 +127,7 @@ workflow SHERLOCK {
     emit:
     qc             = SHERLOCK_QC.out.sumstats    // channel: [ meta, path(*.qc.tsv.gz) ]
     munged         = ch_munged                   // channel: [ meta, path(*.sumstats.gz) ]
+    ldsc           = ch_ldsc                     // channel: [ meta1, meta2, path(*.ldsc.tsv) ]
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
 

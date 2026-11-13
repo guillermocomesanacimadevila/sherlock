@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "sherlock_ldsc"
+description: Genetic correlation (rg) and SNP heritability between two traits with LDSC via GenomicSEM
+keywords:
+  - gwas
+  - ldsc
+  - genetic correlation
+  - heritability
+tools:
+  - "GenomicSEM":
+      description: "R package for structural equation modelling of GWAS summary statistics, incl. LDSC munge and rg"
+      homepage: "https://github.com/GenomicSEM/GenomicSEM"
+      licence: ["GPL-3.0-or-later"]
+      identifier: ""
+
+input:
+  - - meta1:
+        type: map
+        description: Trait 1 info from the samplesheet (first by trait name), e.g. [ id:'AD', trait_type:'cc', pop_prev:0.05, ... ]
+    - sumstats1:
+        type: file
+        description: Trait 1 munged sumstats from SHERLOCK_MUNGE (SNP N Z A1 A2)
+        pattern: "*.sumstats.gz"
+    - meta2:
+        type: map
+        description: Trait 2 info from the samplesheet
+    - sumstats2:
+        type: file
+        description: Trait 2 munged sumstats from SHERLOCK_MUNGE (SNP N Z A1 A2)
+        pattern: "*.sumstats.gz"
+  - ld_ref:
+      type: directory
+      description: LDSC LD score folder (e.g. eur_w_ld_chr/), used for both LD scores and weights
+
+output:
+  results:
+    - - meta1:
+          type: map
+          description: Trait 1 info from the samplesheet
+      - meta2:
+          type: map
+          description: Trait 2 info from the samplesheet
+      - "*.ldsc.tsv":
+          type: file
+          description: One-row table (h2_1/2, gcov, rg, rg_se, rg_z, rg_p, intercepts, n_snps)
+          pattern: "*.ldsc.tsv"
+  log:
+    - - meta1:
+          type: map
+          description: Trait 1 info from the samplesheet
+      - meta2:
+          type: map
+          description: Trait 2 info from the samplesheet
+      - "*_ldsc.log":
+          type: file
+          description: GenomicSEM LDSC log
+          pattern: "*_ldsc.log"
+
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process the versions were collected from
+      - GenomicSEM:
+          type: string
+          description: The tool name
+      - "Rscript -e 'cat(as.character(packageVersion(\"GenomicSEM\")))'":
+          type: eval
+          description: The command used to get the version
+
+authors:
+  - "@guillermocomesanacimadevila"
+maintainers:
+  - "@guillermocomesanacimadevila"
