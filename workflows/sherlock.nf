@@ -7,6 +7,7 @@ include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_sherlock_pipeline'
 include { SHERLOCK_QC            } from '../modules/local/sherlock/qc'
+include { SHERLOCK_MUNGE         } from '../modules/local/sherlock/munge'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -60,6 +61,27 @@ workflow SHERLOCK {
     SHERLOCK_QC(ch_gwas, ch_chain)
 
     //
+    // GENETIC CORRELATION (rg)
+    //
+
+    def steps = params.steps.tokenize(',')
+
+    // munged sumstats, stays empty if rg isn't run
+    def ch_munged = channel.empty()
+
+    if (steps.contains('rg')) {
+
+        // hm3 is required for munge
+        if (!params.hm3) {
+            error("--steps includes 'rg' but hm3 is not set: add the HapMap3 SNP list (w_hm3.snplist) to params.yaml.")
+        }
+        def ch_hm3 = channel.value(file(params.hm3, checkIfExists: true))
+
+        SHERLOCK_MUNGE(SHERLOCK_QC.out.sumstats, ch_hm3)
+        ch_munged = SHERLOCK_MUNGE.out.sumstats
+    }
+
+    //
     // Collate and save software versions
     //
     def topic_versions = channel.topic("versions")
@@ -89,6 +111,7 @@ workflow SHERLOCK {
         )
     emit:
     qc             = SHERLOCK_QC.out.sumstats    // channel: [ meta, path(*.qc.tsv.gz) ]
+    munged         = ch_munged                   // channel: [ meta, path(*.sumstats.gz) ]
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
 

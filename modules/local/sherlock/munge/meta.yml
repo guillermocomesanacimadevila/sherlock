@@ -1,0 +1,64 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "sherlock_munge"
+description: Munge QC'd GWAS summary statistics into LDSC format with GenomicSEM
+keywords:
+  - gwas
+  - summary statistics
+  - ldsc
+  - munge
+  - genetic correlation
+tools:
+  - "GenomicSEM":
+      description: "R package for structural equation modelling of GWAS summary statistics, incl. LDSC munge and rg"
+      homepage: "https://github.com/GenomicSEM/GenomicSEM"
+      licence: ["GPL-3.0-or-later"]
+      identifier: ""
+
+input:
+  - - meta:
+        type: map
+        description: |
+          Trait info from the samplesheet, e.g. [ id:'AD', build:'GRCh38', trait_type:'cc', ... ]
+    - sumstats:
+        type: file
+        description: QC'd sumstats from SHERLOCK_QC (SNP CHR BP A1 A2 BETA SE P N [FRQ] [INFO])
+        pattern: "*.qc.tsv.gz"
+  - hm3:
+      type: file
+      description: HapMap3 SNP list used to keep and align SNPs (e.g. w_hm3.snplist)
+      pattern: "*.snplist"
+
+output:
+  sumstats:
+    - - meta:
+          type: map
+          description: Trait info from the samplesheet
+      - "*.sumstats.gz":
+          type: file
+          description: Munged sumstats, LDSC format (SNP N Z A1 A2)
+          pattern: "*.sumstats.gz"
+  log:
+    - - meta:
+          type: map
+          description: Trait info from the samplesheet
+      - "*_munge.log":
+          type: file
+          description: GenomicSEM munge log (SNPs kept/removed at each step)
+          pattern: "*_munge.log"
+
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process the versions were collected from
+      - GenomicSEM:
+          type: string
+          description: The tool name
+      - "Rscript -e 'cat(as.character(packageVersion(\"GenomicSEM\")))'":
+          type: eval
+          description: The command used to get the version
+
+authors:
+  - "@guillermocomesanacimadevila"
+maintainers:
+  - "@guillermocomesanacimadevila"

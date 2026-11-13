@@ -35,8 +35,8 @@
                 "steps": {
                     "type": "string",
                     "default": "qc",
-                    "pattern": "^((qc|ldsc|loci|coloc|smr|report)(,|$))+$",
-                    "description": "Comma-separated list of steps to run, e.g. 'qc,ldsc'. QC always runs.",
+                    "pattern": "^((qc|rg|loci|coloc|smr|report)(,|$))+$",
+                    "description": "Comma-separated list of steps to run, e.g. 'qc,rg'. QC always runs.",
                     "fa_icon": "fas fa-list-ol"
                 },
                 "outdir": {
@@ -78,6 +78,15 @@
                     "exists": true,
                     "description": "UCSC liftover chain file. Only needed if a GWAS build differs from target_build.",
                     "fa_icon": "fas fa-link"
+                },
+                "hm3": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "pattern": "^\\S+\\.snplist$",
+                    "description": "HapMap3 SNP list (e.g. w_hm3.snplist) used by LDSC munge to keep and align SNPs.",
+                    "help_text": "Needed when the rg step runs. The standard file comes with the LDSC reference data.",
+                    "fa_icon": "fas fa-list"
                 }
             }
         },
