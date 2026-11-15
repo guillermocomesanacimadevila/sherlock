@@ -95,6 +95,35 @@
                     "description": "LDSC LD score folder (e.g. eur_w_ld_chr/) with <chr>.l2.ldscore.gz files.",
                     "help_text": "Needed when the rg step runs. Used for both LD scores and regression weights. Must match the ancestry of both GWAS.",
                     "fa_icon": "fas fa-folder"
+                },
+                "hdl_ref": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "exists": true,
+                    "description": "HDL reference panel folder (e.g. UKB_imputed_SVD_eigen99_extraction/).",
+                    "help_text": "Needed when rg_methods includes 'hdl'. Download from https://github.com/zhenin/HDL/wiki/Reference-panels (UKB panels are EUR only; the array panel is ~7.5 GB, imputed HapMap3 ~33 GB).",
+                    "fa_icon": "fas fa-folder"
+                }
+            }
+        },
+        "rg_options": {
+            "title": "Genetic correlation options",
+            "type": "object",
+            "fa_icon": "fas fa-link",
+            "description": "Settings for the global rg step (LDSC + HDL).",
+            "properties": {
+                "rg_methods": {
+                    "type": "string",
+                    "default": "ldsc,hdl",
+                    "pattern": "^((ldsc|hdl)(,|$))+$",
+                    "description": "Comma-separated rg methods to run, e.g. 'ldsc' or 'ldsc,hdl'.",
+                    "fa_icon": "fas fa-list"
+                },
+                "hdl_nref": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Sample size of the HDL reference panel. Leave empty for the UKB panels (335265).",
+                    "fa_icon": "fas fa-users"
                 }
             }
         },
@@ -271,6 +300,9 @@
         },
         {
             "$ref": "#/$defs/reference_options"
+        },
+        {
+            "$ref": "#/$defs/rg_options"
         },
         {
             "$ref": "#/$defs/qc_options"

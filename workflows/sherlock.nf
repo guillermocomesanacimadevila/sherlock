@@ -9,6 +9,7 @@ include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_sher
 include { SHERLOCK_QC            } from '../modules/local/sherlock/qc'
 include { SHERLOCK_MUNGE         } from '../modules/local/sherlock/munge'
 include { SHERLOCK_LDSC          } from '../modules/local/sherlock/ldsc'
+include { SHERLOCK_HDL           } from '../modules/local/sherlock/hdl'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -65,35 +66,58 @@ workflow SHERLOCK {
     // GENETIC CORRELATION (rg)
     //
 
-    def steps = params.steps.tokenize(',')
+    def steps      = params.steps.tokenize(',')
+    def rg_methods = params.rg_methods.tokenize(',')
 
-    // munged sumstats + LDSC results, stay empty if rg isn't run
+    // munged sumstats + rg results, stay empty if rg (or that method) isn't run
     def ch_munged = channel.empty()
     def ch_ldsc   = channel.empty()
+    def ch_hdl    = channel.empty()
 
     if (steps.contains('rg')) {
 
-        // hm3 + ldsc_ref are required for rg
-        if (!params.hm3) {
-            error("--steps includes 'rg' but hm3 is not set: add the HapMap3 SNP list (w_hm3.snplist) to params.yaml.")
+        // ---- LDSC: munge -> rg, needs hm3 + ldsc_ref ----
+        if (rg_methods.contains('ldsc')) {
+
+            if (!params.hm3) {
+                error("rg_methods includes 'ldsc' but hm3 is not set: add the HapMap3 SNP list (w_hm3.snplist) to params.yaml.")
+            }
+            if (!params.ldsc_ref) {
+                error("rg_methods includes 'ldsc' but ldsc_ref is not set: add the LD score folder (eur_w_ld_chr/) to params.yaml.")
+            }
+            def ch_hm3      = channel.value(file(params.hm3, checkIfExists: true))
+            def ch_ldsc_ref = channel.value(file(params.ldsc_ref, checkIfExists: true))
+
+            SHERLOCK_MUNGE(SHERLOCK_QC.out.sumstats, ch_hm3)
+            ch_munged = SHERLOCK_MUNGE.out.sumstats
+
+            // both traits into one tuple, sorted by name: [ meta1, sumstats1, meta2, sumstats2 ] (AD, SCZ)
+            ch_munged
+                .toSortedList { a, b -> a[0].id <=> b[0].id }
+                .map { traits -> traits[0] + traits[1] }
+                .set { ch_pair_munged }
+
+            SHERLOCK_LDSC(ch_pair_munged, ch_ldsc_ref)
+            ch_ldsc = SHERLOCK_LDSC.out.results
         }
-        if (!params.ldsc_ref) {
-            error("--steps includes 'rg' but ldsc_ref is not set: add the LD score folder (eur_w_ld_chr/) to params.yaml.")
+
+        // ---- HDL: reads QC output directly (no munge), needs hdl_ref ----
+        if (rg_methods.contains('hdl')) {
+
+            if (!params.hdl_ref) {
+                error("rg_methods includes 'hdl' but hdl_ref is not set: add the HDL panel folder to params.yaml, or set rg_methods: ldsc to skip HDL.")
+            }
+            def ch_hdl_ref = channel.value(file(params.hdl_ref, checkIfExists: true))
+
+            // same pairing as LDSC, but on the QC'd sumstats
+            SHERLOCK_QC.out.sumstats
+                .toSortedList { a, b -> a[0].id <=> b[0].id }
+                .map { traits -> traits[0] + traits[1] }
+                .set { ch_pair_qc }
+
+            SHERLOCK_HDL(ch_pair_qc, ch_hdl_ref)
+            ch_hdl = SHERLOCK_HDL.out.results
         }
-        def ch_hm3      = channel.value(file(params.hm3, checkIfExists: true))
-        def ch_ldsc_ref = channel.value(file(params.ldsc_ref, checkIfExists: true))
-
-        SHERLOCK_MUNGE(SHERLOCK_QC.out.sumstats, ch_hm3)
-        ch_munged = SHERLOCK_MUNGE.out.sumstats
-
-        // both traits into one tuple, sorted by name: [ meta1, sumstats1, meta2, sumstats2 ] (AD, SCZ)
-        ch_munged
-            .toSortedList { a, b -> a[0].id <=> b[0].id }
-            .map { traits -> traits[0] + traits[1] }
-            .set { ch_pair }
-
-        SHERLOCK_LDSC(ch_pair, ch_ldsc_ref)
-        ch_ldsc = SHERLOCK_LDSC.out.results
     }
 
     //
@@ -128,6 +152,7 @@ workflow SHERLOCK {
     qc             = SHERLOCK_QC.out.sumstats    // channel: [ meta, path(*.qc.tsv.gz) ]
     munged         = ch_munged                   // channel: [ meta, path(*.sumstats.gz) ]
     ldsc           = ch_ldsc                     // channel: [ meta1, meta2, path(*.ldsc.tsv) ]
+    hdl            = ch_hdl                      // channel: [ meta1, meta2, path(*.hdl.tsv) ]
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
 

@@ -13,6 +13,10 @@ outdir: projects/example/results
 # steps to run (QC always runs)
 steps: qc,rg
 
+# rg
+rg_methods: ldsc,hdl                            # rg methods to run; use "ldsc" to skip HDL (no HDL panel needed)
+hdl_nref: 335265                                # sample size of the HDL panel (335265 for all UKB panels)
+
 # QC
 target_build: GRCh38                            # build every GWAS is lifted to (GRCh37 or GRCh38)
 maf_thresh: 0.01                                # drop SNPs with minor allele frequency below this
@@ -26,3 +30,4 @@ ref_panel: /path/to/1000G.EUR.QC.ALL            # PLINK prefix (.bed/.bim/.fam)
 chain_file: /path/to/hg19ToHg38.over.chain      # needed because SCZ is GRCh37 and target_build is GRCh38
 hm3: /path/to/w_hm3.snplist                     # HapMap3 SNP list for LDSC munge (rg step)
 ldsc_ref: /path/to/eur_w_ld_chr                 # LDSC LD score folder (rg step)
+hdl_ref: /path/to/UKB_imputed_SVD_eigen99_extraction   # HDL panel folder (rg step, EUR only), from github.com/zhenin/HDL/wiki/Reference-panels
