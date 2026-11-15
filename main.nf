@@ -40,7 +40,8 @@ include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_sher
 workflow NFCORE_SHERLOCK {
 
     take:
-    samplesheet // channel: samplesheet read in from --input
+    traits // channel: [ meta, sumstats ], one per trait (from --input)
+    pairs  // channel: [ id1, id2 ], one per trait pair
 
     main:
 
@@ -48,7 +49,8 @@ workflow NFCORE_SHERLOCK {
     // WORKFLOW: Run pipeline
     //
     SHERLOCK (
-        samplesheet,
+        traits,
+        pairs,
         params.outdir,
     )
 }
@@ -80,7 +82,8 @@ workflow {
     // WORKFLOW: Run main workflow
     //
     NFCORE_SHERLOCK (
-        PIPELINE_INITIALISATION.out.samplesheet
+        PIPELINE_INITIALISATION.out.traits,
+        PIPELINE_INITIALISATION.out.pairs
     )
     //
     // SUBWORKFLOW: Run completion tasks

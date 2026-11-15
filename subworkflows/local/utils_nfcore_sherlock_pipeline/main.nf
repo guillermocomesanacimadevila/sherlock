@@ -104,13 +104,51 @@ workflow PIPELINE_INITIALISATION {
     // Create channel from input file provided through params.input
     //
 
-    channel
-        .fromList(samplesheetToList(input, "${projectDir}/assets/schema_input.json"))
-        .set { ch_samplesheet }   // [ meta, sumstats ]
+    def rows = samplesheetToList(input, "${projectDir}/assets/schema_input.json")   // [ meta, sumstats ] per row
+
+    // ---- no 'pair' column: exactly 2 rows = one pair ----
+    def has_pair = rows.any { row -> row[0].pair }
+    if (!has_pair) {
+        if (rows.size() != 2) {
+            error("Input has ${rows.size()} rows but no 'pair' column: add a 'pair' column to say which rows belong together.")
+        }
+        rows = rows.collect { row -> [ row[0] + [pair: 'pair1'], row[1] ] }
+    }
+    if (rows.any { row -> !row[0].pair }) {
+        error("Some rows have a 'pair' value and some don't: fill in 'pair' for every row.")
+    }
+
+    // ---- pairs: [ id1, id2 ] sorted by name, one per pair ----
+    def pair_list = rows
+        .groupBy { row -> row[0].pair }
+        .collect { pair, pair_rows ->
+            if (pair_rows.size() != 2) {
+                error("Pair '${pair}' has ${pair_rows.size()} rows: each pair needs exactly 2 (one per trait).")
+            }
+            pair_rows.collect { row -> row[0].id }.sort()
+        }
+    if (pair_list.unique(false).size() != pair_list.size()) {
+        error("The same two traits are listed under more than one pair label: list each pair once.")
+    }
+
+    // ---- traits: one [ meta, sumstats ] per trait, 'pair' dropped so QC runs once per trait ----
+    def trait_list = rows
+        .collect { row -> [ row[0].findAll { key, _value -> key != 'pair' }, row[1] ] }
+        .groupBy { row -> row[0].id }
+        .collect { id, trait_rows ->
+            if (trait_rows.unique(false).size() > 1) {
+                error("Trait '${id}' is in several rows with different details (file, build, N or columns): make its rows identical.")
+            }
+            trait_rows[0]
+        }
+
+    channel.fromList(trait_list).set { ch_traits }   // [ meta, sumstats ], one per trait
+    channel.fromList(pair_list).set { ch_pairs }     // [ id1, id2 ], one per pair
 
     emit:
-    samplesheet = ch_samplesheet
-    versions    = ch_versions
+    traits   = ch_traits
+    pairs    = ch_pairs
+    versions = ch_versions
 }
 
 /*

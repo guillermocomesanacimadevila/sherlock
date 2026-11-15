@@ -17,10 +17,21 @@ include { SHERLOCK_HDL           } from '../modules/local/sherlock/hdl'
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+// [ id1, id2 ] per pair + [ meta, sumstats ] per trait  ->  [ meta1, sumstats1, meta2, sumstats2 ] per pair
+def pairFiles(ch_pairs, ch_files) {
+    def ch_by_id = ch_files.map { meta, sumstats -> [ meta.id, meta, sumstats ] }
+    return ch_pairs
+        .combine(ch_by_id, by: 0)                                                    // match trait 1
+        .map { _id1, id2, meta1, sumstats1 -> [ id2, meta1, sumstats1 ] }
+        .combine(ch_by_id, by: 0)                                                    // match trait 2
+        .map { _id2, meta1, sumstats1, meta2, sumstats2 -> [ meta1, sumstats1, meta2, sumstats2 ] }
+}
+
 workflow SHERLOCK {
 
     take:
-    ch_samplesheet // channel: samplesheet read in from --input
+    ch_traits // channel: [ meta, sumstats ], one per trait
+    ch_pairs  // channel: [ id1, id2 ], one per trait pair
     outdir
 
     main:
@@ -45,7 +56,7 @@ workflow SHERLOCK {
         }
     }
 
-    ch_samplesheet
+    ch_traits
         .map { meta, sumstats  ->
             if (meta.build != params.target_build && !params.chain_file) {
                 error("${meta.id} is ${meta.build} but target_build is ${params.target_build}: set chain_file in params.yaml for liftover.")
@@ -91,11 +102,8 @@ workflow SHERLOCK {
             SHERLOCK_MUNGE(SHERLOCK_QC.out.sumstats, ch_hm3)
             ch_munged = SHERLOCK_MUNGE.out.sumstats
 
-            // both traits into one tuple, sorted by name: [ meta1, sumstats1, meta2, sumstats2 ] (AD, SCZ)
-            ch_munged
-                .toSortedList { a, b -> a[0].id <=> b[0].id }
-                .map { traits -> traits[0] + traits[1] }
-                .set { ch_pair_munged }
+            // one tuple per pair: [ meta1, sumstats1, meta2, sumstats2 ] (trait names sorted, e.g. AD, SCZ)
+            pairFiles(ch_pairs, ch_munged).set { ch_pair_munged }
 
             SHERLOCK_LDSC(ch_pair_munged, ch_ldsc_ref)
             ch_ldsc = SHERLOCK_LDSC.out.results
@@ -110,10 +118,7 @@ workflow SHERLOCK {
             def ch_hdl_ref = channel.value(file(params.hdl_ref, checkIfExists: true))
 
             // same pairing as LDSC, but on the QC'd sumstats
-            SHERLOCK_QC.out.sumstats
-                .toSortedList { a, b -> a[0].id <=> b[0].id }
-                .map { traits -> traits[0] + traits[1] }
-                .set { ch_pair_qc }
+            pairFiles(ch_pairs, SHERLOCK_QC.out.sumstats).set { ch_pair_qc }
 
             SHERLOCK_HDL(ch_pair_qc, ch_hdl_ref)
             ch_hdl = SHERLOCK_HDL.out.results

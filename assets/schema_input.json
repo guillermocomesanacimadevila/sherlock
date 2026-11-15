@@ -2,14 +2,19 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://raw.githubusercontent.com/nf-core/sherlock/master/assets/schema_input.json",
     "title": "nf-core/sherlock pipeline - params.input schema",
-    "description": "GWAS samplesheet: one row per trait, exactly two rows (one trait pair)",
+    "description": "GWAS samplesheet: one row per trait per pair. Rows with the same 'pair' value form one trait pair; without a 'pair' column, exactly two rows = one pair",
     "type": "array",
     "minItems": 2,
-    "maxItems": 2,
-    "uniqueEntries": ["trait"],
+    "uniqueEntries": ["pair", "trait"],
     "items": {
         "type": "object",
         "properties": {
+            "pair": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Pair label cannot contain spaces (e.g. AD_SCZ or 1)",
+                "meta": ["pair"]
+            },
             "trait": {
                 "type": "string",
                 "pattern": "^[^\\s_]+$",
