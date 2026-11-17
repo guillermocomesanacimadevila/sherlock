@@ -7,7 +7,6 @@ suppressPackageStartupMessages({
 })
 
 # allocate HDL-L module to -> 'process_high'
-
 get_args <- function() {
     
     # args for HDL-L    
@@ -54,8 +53,12 @@ read_sumstats <- function(path) {
 get_loci <- function(args) {
     load(file.path(args$ld, "HDLL_LOC_snps.RData")) # NEWLOC
     loci <- data.frame(
+        locus = as.integer(NEWLOC$LOC),
         chr = as.integer(NEWLOC$CHR),
-        piece = as.integer(NEWLOC$piece)
+        piece = as.integer(NEWLOC$piece),
+        start_grch37 = NEWLOC$START,
+        stop_grch37 = NEWLOC$STOP,
+        n_snps_ref = unlist(nsnps.list.imputed)
     )
 
     if (!is.null(args$chr)) {
@@ -98,29 +101,37 @@ run_hdl_l <- function(args) {
     results <- mclapply(seq_len(nrow(loci)), run_locus, mc.cores = args$cores)
     result  <- do.call(rbind, results)
     if (is.null(result)) stop("HDL-L failed for every locus!")
-    return(result)
+    result <- merge(loci, result, by = c("chr", "piece"))
+    return(result[order(result$locus), ])
 }
 
 write_results <- function(result, args) {
 
     out <- data.frame(
-        pair      = args$out,
-        trait1    = args$trait1,
-        trait2    = args$trait2,
-        chr       = result$chr,
-        piece     = result$piece,
-        eigen_use = result$eigen_use,
-        h2_1      = result$Heritability_1,
-        h2_1_p    = result$P_value_Heritability_1,
-        h2_2      = result$Heritability_2,
-        h2_2_p    = result$P_value_Heritability_2,
-        gcov      = result$Genetic_Covariance,
-        rg        = result$Genetic_Correlation,
-        rg_lower  = result$Lower_bound_rg,
-        rg_upper  = result$Upper_bound_rg,
-        rg_p      = result$P
+        pair         = args$out,
+        trait1       = args$trait1,
+        trait2       = args$trait2,
+        locus        = result$locus,
+        chr          = result$chr,
+        piece        = result$piece,
+        start_grch37 = result$start_grch37,
+        stop_grch37  = result$stop_grch37,
+        n_snps_ref   = result$n_snps_ref,
+        eigen_use    = result$eigen_use,
+        h2_1         = result$Heritability_1,
+        h2_1_p       = result$P_value_Heritability_1,
+        h2_2         = result$Heritability_2,
+        h2_2_p       = result$P_value_Heritability_2,
+        gcov         = result$Genetic_Covariance,
+        rg           = result$Genetic_Correlation,
+        rg_lower     = result$Lower_bound_rg,
+        rg_upper     = result$Upper_bound_rg,
+        rg_p         = result$P
     )
 
+    out$h2_1_p_fdr <- p.adjust(out$h2_1_p, method = "fdr")
+    out$h2_2_p_fdr <- p.adjust(out$h2_2_p, method = "fdr")
+    out$rg_p_fdr   <- p.adjust(out$rg_p, method = "fdr")
     write.table(out, paste0(args$out, ".hdll.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
     return(out)
 }
