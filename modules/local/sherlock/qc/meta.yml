@@ -21,8 +21,8 @@ input:
           n_cases:..., n_controls:..., snp_col:'SNP', chr_col:'CHR', ... ]
     - sumstats:
         type: file
-        description: GWAS summary statistics (tab-separated, can be gzipped)
-        pattern: "*.{tsv,txt,tsv.gz,txt.gz}"
+        description: GWAS summary statistics (tab, comma or space-separated via meta.sep; can be gzipped)
+        pattern: "*.{tsv,txt,csv,tsv.gz,txt.gz,csv.gz}"
   - chain_file:
       type: file
       description: UCSC liftover chain file (optional, only if build != target build)
@@ -37,6 +37,14 @@ output:
           type: file
           description: QC'd sumstats, gzipped tab-separated (SNP CHR BP A1 A2 BETA SE P N [FRQ] [INFO])
           pattern: "*.qc.tsv.gz"
+  summary:
+    - - meta:
+          type: map
+          description: Trait info from the samplesheet
+      - "*.qc_summary.tsv":
+          type: file
+          description: Rows removed and remaining after each QC step (step, removed, remaining)
+          pattern: "*.qc_summary.tsv"
 
 topics:
   versions:

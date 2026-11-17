@@ -119,7 +119,7 @@
                     "description": "Comma-separated rg methods to run, e.g. 'ldsc' or 'ldsc,hdl'.",
                     "fa_icon": "fas fa-list"
                 },
-                "hdl_nref": {
+                "rg_hdl_nref": {
                     "type": "integer",
                     "minimum": 1,
                     "description": "Sample size of the HDL reference panel. Leave empty for the UKB panels (335265).",
@@ -140,7 +140,7 @@
                     "description": "Genome build that both GWAS are lifted to.",
                     "fa_icon": "fas fa-dna"
                 },
-                "maf_thresh": {
+                "qc_maf_thresh": {
                     "type": "number",
                     "default": 0.01,
                     "minimum": 0,
@@ -148,20 +148,47 @@
                     "description": "Remove SNPs with minor allele frequency below this value.",
                     "fa_icon": "fas fa-sliders-h"
                 },
-                "info_thresh": {
+                "qc_info_thresh": {
                     "type": "number",
                     "minimum": 0,
                     "maximum": 1,
                     "description": "Remove SNPs with imputation INFO below this value. Leave empty for no INFO filter.",
                     "fa_icon": "fas fa-sliders-h"
                 },
-                "drop_mhc": {
+                "qc_drop_indels": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Remove indels and non-ACGT alleles.",
+                    "help_text": "Switching this off can affect later steps (e.g. LDSC/HDL only use SNPs).",
+                    "fa_icon": "fas fa-cut"
+                },
+                "qc_drop_palindromes": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Remove palindromic (A/T, C/G) SNPs.",
+                    "help_text": "Strand of palindromic SNPs can't be checked, so keeping them can give wrong allele directions in later steps.",
+                    "fa_icon": "fas fa-cut"
+                },
+                "qc_drop_multiallelic": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Remove variants that share a position with another variant.",
+                    "fa_icon": "fas fa-cut"
+                },
+                "qc_drop_non_autosomal": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Keep chromosomes 1-22 only.",
+                    "help_text": "LD references are autosomal, so X/Y variants are dropped later anyway.",
+                    "fa_icon": "fas fa-cut"
+                },
+                "qc_drop_mhc": {
                     "type": "boolean",
                     "default": true,
                     "description": "Remove the MHC region (chr6:25-34 Mb).",
                     "fa_icon": "fas fa-cut"
                 },
-                "drop_apoe": {
+                "qc_drop_apoe": {
                     "type": "boolean",
                     "default": false,
                     "description": "Remove the APOE region (chr19).",

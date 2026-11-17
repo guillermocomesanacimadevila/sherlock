@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sherlock-tools"
-version = "0.1.2"
+version = "0.1.3"
 description = "QC, liftover and harmonisation of GWAS summary statistics for the nf-core/sherlock pipeline"
 readme = "README.md"
 license = "MIT"

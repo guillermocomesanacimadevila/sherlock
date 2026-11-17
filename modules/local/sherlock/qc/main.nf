@@ -10,8 +10,9 @@ process SHERLOCK_QC {
     path chain_file // liftover chain file, or [] if none
 
     output:
-    // QC'd sumstats
-    tuple val(meta), path("*.qc.tsv.gz"), emit: sumstats
+    // QC'd sumstats + per-step counts
+    tuple val(meta), path("*.qc.tsv.gz"),      emit: sumstats
+    tuple val(meta), path("*.qc_summary.tsv"), emit: summary
 
     // sherlock-tools version -> pipeline_info/nf_core_sherlock_software_versions.yml
     tuple val("${task.process}"),
@@ -47,12 +48,15 @@ process SHERLOCK_QC {
     if (meta.n_cases)    { optional << "--n-cases ${meta.n_cases}" }
     if (meta.n_controls) { optional << "--n-controls ${meta.n_controls}" }
     if (chain_file)      { optional << "--chain-file ${chain_file}" }
+    if (meta.sep == 'comma') { optional << "--sep ','" }
+    if (meta.sep == 'space') { optional << "--sep ' '" }
     optional = optional.join(' ')
 
     """
     sherlockQC.py \\
         --sumstats      ${sumstats} \\
         --out           ${prefix}.qc.tsv.gz \\
+        --summary       ${prefix}.qc_summary.tsv \\
         --trait-type    ${meta.trait_type} \\
         --genome-build  ${meta.build} \\
         --snp-col       ${meta.snp_col} \\
@@ -75,5 +79,6 @@ process SHERLOCK_QC {
     }
     """
     echo "" | gzip > ${prefix}.qc.tsv.gz
+    touch ${prefix}.qc_summary.tsv
     """
 }

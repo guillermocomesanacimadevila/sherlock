@@ -20,6 +20,7 @@ def main():
     parser = argparse.ArgumentParser(description="sherlock GWAS/xQTL QC")
     parser.add_argument("--sumstats", required=True, help="input summary statistics (.tsv / .tsv.gz)")
     parser.add_argument("--out", required=True, help="output QC'd sumstats (.tsv.gz)")
+    parser.add_argument("--summary", required=True, help="output per-step QC counts (.tsv)")
     parser.add_argument("--sep", default="\t", help="input separator")
     parser.add_argument("--snp-col", required=True)
     parser.add_argument("--chr-col", required=True)
@@ -43,15 +44,24 @@ def main():
     parser.add_argument("--chain-file", default=None)
     parser.add_argument("--drop-mhc", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--drop-apoe", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--drop-indels", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--drop-palindromes", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--drop-multiallelic", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--drop-non-autosomal", action=argparse.BooleanOptionalAction, default=True)
     args = parser.parse_args()
 
     # read everything as strings -> _fix_data_types does the casting
     sumstats = pl.read_csv(
         args.sumstats,
         separator=args.sep,
+        comment_prefix="##",  # skip metadata lines (e.g. PGC)
         infer_schema=False,
         null_values=["", "NA", "NaN", "nan", "."],
     )
+
+    # wrong separator -> whole line read as one column
+    if args.snp_col not in sumstats.columns:
+        raise SystemExit(f"Column '{args.snp_col}' not found (file read with sep {args.sep!r}). Check sep in gwas_pair.csv.")
 
     qc = QualityControl(
         sumstats=sumstats,
@@ -77,12 +87,18 @@ def main():
         chain_file=args.chain_file,
         drop_mhc=args.drop_mhc,
         drop_apoe=args.drop_apoe,
+        drop_indels=args.drop_indels,
+        drop_palindromes=args.drop_palindromes,
+        drop_multiallelic=args.drop_multiallelic,
+        drop_non_autosomal=args.drop_non_autosomal,
     )
 
     df = qc.run()
     with gzip.open(args.out, "wb", compresslevel=6) as f:
         df.write_csv(f, separator="\t")
     print(f"Written: {args.out}")
+
+    pl.DataFrame(qc.summary, schema=["step", "removed", "remaining"], orient="row").write_csv(args.summary, separator="\t")
 
 
 if __name__ == "__main__":

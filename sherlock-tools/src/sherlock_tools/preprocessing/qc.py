@@ -35,6 +35,10 @@ class QualityControl:
             chain_file: str | None = None, # although in params.yaml arg -> liftover_dir/
             drop_mhc: bool = True,
             drop_apoe: bool = False,
+            drop_indels: bool = True,
+            drop_palindromes: bool = True,
+            drop_multiallelic: bool = True,
+            drop_non_autosomal: bool = True,
         ):
 
         # data
@@ -72,6 +76,18 @@ class QualityControl:
         self.drop_mhc = drop_mhc
         self.drop_apoe = drop_apoe
 
+        # optional filters (default on)
+        self.drop_indels = drop_indels
+        self.drop_palindromes = drop_palindromes
+        self.drop_multiallelic = drop_multiallelic
+        self.drop_non_autosomal = drop_non_autosomal
+
+        # per-step counts -> (step, removed, remaining), written out by the bin script
+        self.summary = []
+
+        # per-step counts -> (step, removed, remaining), written out by the bin script
+        self.summary = []
+
     def _fix_data_types(self):
         # strict=False -> values that can't be cast become null (caught by _correct_for_missingness)
         df = self.sumstats.with_columns(
@@ -105,6 +121,10 @@ class QualityControl:
         return df
 
     def _restrict_to_autosomal(self):
+        if not self.drop_non_autosomal:
+            print("Keeping non-autosomal variants!")
+            return self.sumstats
+
         # keep chr 1-22 only ("chr" prefix already stripped in _fix_data_types)
         autosomes = [str(i) for i in range(1, 23)]
         n_before = self.sumstats.height
@@ -112,6 +132,7 @@ class QualityControl:
         n_after = df.height
         print(f"Removed non-autosomal variants: {n_before - n_after}")
         print(f"Rows after autosome restriction: {n_after}")
+        self.summary.append(("non_autosomal", n_before - n_after, n_after))
         self.sumstats = df
         return df
 
@@ -121,6 +142,7 @@ class QualityControl:
         n_after = df.height
         print(f"Removed empty rows: {n_before - n_after}")
         print(f"Rows after empty-row removal: {n_after}")
+        self.summary.append(("empty_rows", n_before - n_after, n_after))
 
         # remove rows missing any key column (+ optional cols if given)
         key_cols = [
@@ -135,6 +157,7 @@ class QualityControl:
         n_after = df.height
         print(f"Removed rows with missing key values: {n_before - n_after}")
         print(f"Rows after missing-value removal: {n_after}")
+        self.summary.append(("missing_values", n_before - n_after, n_after))
         self.sumstats = df
         return df
 
@@ -145,10 +168,15 @@ class QualityControl:
         n_after = df.height
         print(f"Removed duplicated SNPs: {n_before - n_after}")
         print(f"Rows after duplicate removal: {n_after}")
+        self.summary.append(("duplicates", n_before - n_after, n_after))
         self.sumstats = df
         return df
 
     def _remove_multiallelic(self):
+        if not self.drop_multiallelic:
+            print("Keeping multiallelic variants!")
+            return self.sumstats
+
         # run after duplicate removal -> any repeated CHR:POS left = different alleles
         n_before = self.sumstats.height
         df = self.sumstats.filter(
@@ -157,10 +185,15 @@ class QualityControl:
         n_after = df.height
         print(f"Removed multiallelic variants: {n_before - n_after}")
         print(f"Rows after multiallelic removal: {n_after}")
+        self.summary.append(("multiallelic", n_before - n_after, n_after))
         self.sumstats = df
         return df
 
     def _remove_indels(self):
+        if not self.drop_indels:
+            print("Keeping INDELs!")
+            return self.sumstats
+
         bases = ["A", "T", "C", "G"]
         a1 = pl.col(self.a1_col)
         a2 = pl.col(self.a2_col)
@@ -171,11 +204,16 @@ class QualityControl:
         n_after = df.height
         print(f"Removed INDELs / non-ACGT: {n_before - n_after}")
         print(f"Rows after INDEL removal: {n_after}")
+        self.summary.append(("indels", n_before - n_after, n_after))
         self.sumstats = df
         return df
 
     def _remove_palindromes(self):
-        # A/T and C/G SNPs -> strand can't be resolved, always dropped
+        if not self.drop_palindromes:
+            print("Keeping palindromic SNPs!")
+            return self.sumstats
+
+        # A/T and C/G SNPs -> strand can't be resolved
         a1 = pl.col(self.a1_col)
         a2 = pl.col(self.a2_col)
         is_palindrome = (
@@ -189,6 +227,7 @@ class QualityControl:
         n_after = df.height
         print(f"Removed palindromic SNPs: {n_before - n_after}")
         print(f"Rows after palindrome removal: {n_after}")
+        self.summary.append(("palindromes", n_before - n_after, n_after))
         self.sumstats = df
         return df
     
@@ -205,12 +244,17 @@ class QualityControl:
         n_after = df.height
         print(f"Removed low-MAF variants: {n_before - n_after}")
         print(f"Rows after MAF filter: {n_after}")
+        self.summary.append(("maf", n_before - n_after, n_after))
         self.sumstats = df
         return df
 
     def _info_filter(self):
         if self.info_col is None:
             print("Skipping INFO filter: no INFO column supplied.")
+            return self.sumstats
+
+        if self.info_thresh is None:
+            print("Skipping INFO filter: no INFO threshold set.")
             return self.sumstats
 
         n_before = self.sumstats.height
@@ -220,6 +264,7 @@ class QualityControl:
         n_after = df.height
         print(f"Removed low-INFO variants: {n_before - n_after}")
         print(f"Rows after INFO filter: {n_after}")
+        self.summary.append(("info", n_before - n_after, n_after))
         self.sumstats = df
         return df
 
@@ -286,6 +331,7 @@ class QualityControl:
         n_after = df.height
         print(f"Removed failed liftover variants: {n_before - n_after}")
         print(f"Rows after liftover: {n_after}")
+        self.summary.append(("liftover", n_before - n_after, n_after))
         df = df.with_columns([
             pl.col("CHR_LIFTED").alias(self.chr_col),
             pl.col("POS_LIFTED").cast(pl.Int64).alias(self.pos_col),
@@ -345,6 +391,7 @@ class QualityControl:
         )
         n_after = df.height
         print(f"Removed MHC variants: {n_before - n_after} ({self.target_genome_build})!")
+        self.summary.append(("mhc", n_before - n_after, n_after))
         self.sumstats = df
         return df
 
@@ -373,8 +420,16 @@ class QualityControl:
         )
         n_after = df.height
         print(f"Removed APOE variants: {n_before - n_after} ({self.target_genome_build})!")
+        self.summary.append(("apoe", n_before - n_after, n_after))
         self.sumstats = df
         return df
+
+    # New -> sherlock-tools 0.1.3
+    def _check_pvalues(self):
+        # P must be in [0, 1] (catches -log10 P)
+        if not self.sumstats[self.pval_col].is_between(0, 1).all():
+            raise ValueError(f"'{self.pval_col}' has values outside 0-1: plain P needed, not -log10(P).")
+        return self.sumstats
 
     def _standardise_shape(self):
         # rename cols to the sherlock format (A1 = effect allele)
@@ -408,8 +463,10 @@ class QualityControl:
     # running wrapper for class -> thin wrapper in bin/ & nf module/subworkflow later!!!!
     def run(self):
         print(f"Rows at start: {self.sumstats.height}")
+        self.summary.append(("start", 0, self.sumstats.height))
         self._fix_data_types()
         self._correct_for_missingness()
+        self._check_pvalues()
         self._fix_pval()
         self._remove_indels()
         self._remove_palindromes()
@@ -426,4 +483,5 @@ class QualityControl:
         self._impute_effective_n()
         self._standardise_shape()
         print(f"Rows at end: {self.sumstats.height}")
+        self.summary.append(("end", 0, self.sumstats.height))
         return self.sumstats

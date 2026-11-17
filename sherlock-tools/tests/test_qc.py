@@ -88,6 +88,23 @@ def test_fix_pval(make_qc):
     assert df.filter(pl.col("MarkerName") == "rs2")["Pval"].item() == 1e-300
     assert (df["Pval"] > 0).all()
 
+def test_check_pvalues(make_qc):
+    qc = make_qc()
+    qc._fix_data_types()
+    before = qc._correct_for_missingness()
+    after = qc._check_pvalues()
+    assert after.equals(before)
+
+def test_check_pvalues_raises_on_log10(make_qc):
+    qc = make_qc()
+    qc._fix_data_types()
+    qc._correct_for_missingness()
+    qc.sumstats = qc.sumstats.with_columns(
+        pl.when(pl.col("MarkerName") == "rs1").then(5.0).otherwise(pl.col("Pval")).alias("Pval")
+    )  # -log10(P) = 5
+    with pytest.raises(ValueError):
+        qc._check_pvalues()
+
 def test_correct_for_missingness(make_qc):
     qc = make_qc()
     before = qc._fix_data_types()
@@ -142,6 +159,12 @@ def test_info_filter(make_qc):
     after = qc._info_filter()
     assert removed(before, after) == {"rs11"}
 
+def test_info_filter_skips_without_thresh(make_qc):
+    qc = make_qc(info_thresh=None)
+    before = qc._fix_data_types()
+    after = qc._info_filter()
+    assert after.height == before.height
+
 def test_remove_mhc(make_qc):
     qc = make_qc()
     before = qc._fix_data_types()
@@ -164,6 +187,30 @@ def test_keep_apoe(make_qc):
     qc = make_qc(drop_apoe=False)
     before = qc._fix_data_types()
     after = qc._remove_apoe()
+    assert after.height == before.height
+
+def test_keep_indels(make_qc):
+    qc = make_qc(drop_indels=False)
+    before = qc._fix_data_types()
+    after = qc._remove_indels()
+    assert after.height == before.height
+
+def test_keep_palindromes(make_qc):
+    qc = make_qc(drop_palindromes=False)
+    before = qc._fix_data_types()
+    after = qc._remove_palindromes()
+    assert after.height == before.height
+
+def test_keep_multiallelic(make_qc):
+    qc = make_qc(drop_multiallelic=False)
+    before = qc._fix_data_types()
+    after = qc._remove_multiallelic()
+    assert after.height == before.height
+
+def test_keep_non_autosomal(make_qc):
+    qc = make_qc(drop_non_autosomal=False)
+    before = qc._fix_data_types()
+    after = qc._restrict_to_autosomal()
     assert after.height == before.height
 
 def test_align_betas_to_risk_allele(make_qc):
@@ -242,3 +289,9 @@ def test_run(make_qc):
     assert (df["BETA"] >= 0).all()
     assert (df["P"] > 0).all()
     assert (df["N"] == 3000).all()
+def test_run_summary(make_qc):
+    qc = make_qc()
+    qc.run()
+    steps = [s for s, _, _ in qc.summary]
+    assert steps[0] == "start" and steps[-1] == "end"
+    assert qc.summary[0][2] - sum(r for _, r, _ in qc.summary) == qc.summary[-1][2]  # 16 - 13 = 3

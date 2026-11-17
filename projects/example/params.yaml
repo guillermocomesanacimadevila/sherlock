@@ -13,16 +13,20 @@ outdir: projects/example/results
 # steps to run (QC always runs)
 steps: qc,rg
 
-# rg
-rg_methods: ldsc,hdl                            # rg methods to run; use "ldsc" to skip HDL (no HDL panel needed)
-hdl_nref: 335265                                # sample size of the HDL panel (335265 for all UKB panels)
-
-# QC
+# ---- qc ----
 target_build: GRCh38                            # build every GWAS is lifted to (GRCh37 or GRCh38)
-maf_thresh: 0.01                                # drop SNPs with minor allele frequency below this
-info_thresh: 0.8                                # drop SNPs with INFO below this (only used if info_col is set)
-drop_mhc: true                                  # remove the MHC region (chr6, ~25-34 Mb)
-drop_apoe: false                                # remove the APOE region (chr19, ~1 Mb either side of APOE)
+qc_maf_thresh: 0.01                             # drop SNPs with minor allele frequency below this
+qc_info_thresh: 0.8                             # drop SNPs with INFO below this (only used if info_col is set)
+qc_drop_indels: true                            # drop indels / non-ACGT alleles
+qc_drop_palindromes: true                       # drop A/T and C/G SNPs (strand can't be checked)
+qc_drop_multiallelic: true                      # drop variants sharing a position
+qc_drop_non_autosomal: true                     # keep chr 1-22 only
+qc_drop_mhc: true                               # remove the MHC region (chr6, ~25-34 Mb)
+qc_drop_apoe: false                             # remove the APOE region (chr19, ~1 Mb either side of APOE)
+
+# ---- rg ----
+rg_methods: ldsc,hdl                            # rg methods to run; use "ldsc" to skip HDL (no HDL panel needed)
+rg_hdl_nref: 335265                             # sample size of the HDL panel (335265 for all UKB panels)
 
 # references
 ancestry: EUR                                   # population of both GWAS; ref_panel must match

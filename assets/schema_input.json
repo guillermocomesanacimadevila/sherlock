@@ -25,8 +25,8 @@
                 "type": "string",
                 "format": "file-path",
                 "exists": true,
-                "pattern": "^\\S+\\.(tsv|txt)(\\.gz)?$",
-                "errorMessage": "Sumstats must be a .tsv/.txt (optionally .gz) file with no spaces in the path"
+                "pattern": "^\\S+\\.(tsv|txt|csv)(\\.gz)?$",
+                "errorMessage": "Sumstats must be a .tsv/.txt/.csv (optionally .gz) file with no spaces in the path"
             },
             "build": {
                 "type": "string",
@@ -49,13 +49,13 @@
             "n_cases": {
                 "type": "integer",
                 "minimum": 1,
-                "errorMessage": "n_cases must be a whole number >= 1",
+                "errorMessage": "n_cases must be a number (e.g. 21982), not a column name. For a per-SNP sample size column use n_col",
                 "meta": ["n_cases"]
             },
             "n_controls": {
                 "type": "integer",
                 "minimum": 1,
-                "errorMessage": "n_controls must be a whole number >= 1",
+                "errorMessage": "n_controls must be a number (e.g. 41944), not a column name. For a per-SNP sample size column use n_col",
                 "meta": ["n_controls"]
             },
             "pop_prev": {
@@ -64,6 +64,12 @@
                 "exclusiveMaximum": 1,
                 "errorMessage": "pop_prev must be between 0 and 1",
                 "meta": ["pop_prev"]
+            },
+            "sep": {
+                "type": "string",
+                "enum": ["tab", "comma", "space"],
+                "errorMessage": "sep must be 'tab', 'comma' or 'space' (leave empty for tab)",
+                "meta": ["sep"]
             },
             "snp_col":  { "type": "string", "meta": ["snp_col"] },
             "chr_col":  { "type": "string", "meta": ["chr_col"] },
