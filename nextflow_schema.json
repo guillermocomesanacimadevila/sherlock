@@ -35,8 +35,8 @@
                 "steps": {
                     "type": "string",
                     "default": "qc",
-                    "pattern": "^((qc|rg|loci|coloc|smr|report)(,|$))+$",
-                    "description": "Comma-separated list of steps to run, e.g. 'qc,rg'. QC always runs.",
+                    "pattern": "^((qc|rg|lrg|loci|coloc|smr|report)(,|$))+$",
+                    "description": "Comma-separated list of steps to run, e.g. 'qc,rg,lrg'. QC always runs.",
                     "fa_icon": "fas fa-list-ol"
                 },
                 "outdir": {
@@ -103,6 +103,14 @@
                     "description": "HDL reference panel folder (e.g. UKB_imputed_SVD_eigen99_extraction/).",
                     "help_text": "Needed when rg_methods includes 'hdl'. Download from https://github.com/zhenin/HDL/wiki/Reference-panels (UKB panels are EUR only; the array panel is ~7.5 GB, imputed HapMap3 ~33 GB).",
                     "fa_icon": "fas fa-folder"
+                },
+                "hdll_ref": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "exists": true,
+                    "description": "HDL-L reference folder holding LD.path/ and bim.path/.",
+                    "help_text": "Needed when lrg_methods includes 'hdll'. Download LD.path.zip and bim.path.zip from https://doi.org/10.5281/zenodo.11001214 (~1.85 GB, UKB EUR) and unzip both into one folder.",
+                    "fa_icon": "fas fa-folder"
                 }
             }
         },
@@ -123,6 +131,28 @@
                     "type": "integer",
                     "minimum": 1,
                     "description": "Sample size of the HDL reference panel. Leave empty for the UKB panels (335265).",
+                    "fa_icon": "fas fa-users"
+                }
+            }
+        },
+        "lrg_options": {
+            "title": "Local genetic correlation options",
+            "type": "object",
+            "fa_icon": "fas fa-map-marked-alt",
+            "description": "Settings for the local rg step (HDL-L).",
+            "properties": {
+                "lrg_methods": {
+                    "type": "string",
+                    "default": "hdll",
+                    "pattern": "^((hdll)(,|$))+$",
+                    "description": "Comma-separated local rg methods to run, e.g. 'hdll'.",
+                    "fa_icon": "fas fa-list"
+                },
+                "lrg_hdll_n0": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of samples shared by the two GWAS. Leave empty for no overlap (0).",
+                    "help_text": "Unlike global HDL, HDL-L does not estimate sample overlap itself. Set it if the two GWAS share cohorts (e.g. both include UK Biobank).",
                     "fa_icon": "fas fa-users"
                 }
             }
@@ -330,6 +360,9 @@
         },
         {
             "$ref": "#/$defs/rg_options"
+        },
+        {
+            "$ref": "#/$defs/lrg_options"
         },
         {
             "$ref": "#/$defs/qc_options"

@@ -4,6 +4,7 @@ suppressPackageStartupMessages({
     library(HDL)
     library(optparse)
     library(data.table)
+    library(parallel)
 })
 
 # allocate HDL-L module to -> 'process_high'
@@ -21,17 +22,17 @@ get_args <- function() {
         make_option("--sumstats2",  type = "character", help = "Trait 2 QC'd sumstats (<trait>.qc.tsv.gz)"),
 
         # reference stuff
-        make_option("--ld",         type = "character", help = "HDL-L LD folder (with HDLL_LOC_snps.RData)"),
-        make_option("--bim",        type = "character", help = "HDL-L bim folder"),
-        make_option("--n-ref",      type = "double",    default = NULL, help = "Reference panel sample size (empty = HDL.L default)"),
+        make_option("--ld",         type = "character", help = "HDL-L LD folder (LD.path, *_LDSVD.rda files)"),
+        make_option("--bim",        type = "character", help = "HDL-L bim folder (bim.path)"),
+        make_option("--n-ref",      type = "double",    default = 335272, help = "Reference panel sample size (HDL-L UKB default: 335272)"),
 
         # settings
-        # idk abt this one
-        make_option("--n0",         type = "double",    default = 0,    help = "Number of overlapping samples between the two GWAS"),
+        make_option("--n0",         type = "double",    default = 0,    help = "Number of overlapping samples between the two GWAS (0 = no overlap)"),
         make_option("--eigen-cut",  type = "double",    default = 0.99, help = "Eigenvalue cut-off"),
 
-        # Nextflow runs one chromosome per task
+        # whole genome by default; --chr for testing one chromosome
         make_option("--chr",        type = "integer",   default = NULL, help = "Chromosome to run (empty = whole genome)"),
+        make_option("--cores",      type = "integer",   default = 1,    help = "Number of cores (task.cpus)"),
 
         # output
         make_option("--out",        type = "character", help = "Output prefix (pair_id, e.g. AD_SCZ)")
@@ -48,32 +49,45 @@ read_sumstats <- function(path) {
   df <- fread(path, select = c("SNP", "A1", "A2", "N", "BETA", "SE"))
   df[, Z := BETA / SE]
   return(as.data.frame(df[, .(SNP, A1, A2, N, Z)]))
+}
 
-# list of loci (chr + piece) from the HDL-L reference
+# loci = LD files in the panel (only these can run); coordinates from the matching bim
 get_loci <- function(args) {
-    load(file.path(args$ld, "HDLL_LOC_snps.RData")) # NEWLOC
+    ld_files <- grep("_LDSVD\\.rda$", list.files(args$ld), value = TRUE)
     loci <- data.frame(
-        locus = as.integer(NEWLOC$LOC),
-        chr = as.integer(NEWLOC$CHR),
-        piece = as.integer(NEWLOC$piece),
-        start_grch37 = NEWLOC$START,
-        stop_grch37 = NEWLOC$STOP,
-        n_snps_ref = unlist(nsnps.list.imputed)
+        chr   = as.integer(sub("^ukb_(chr)?([0-9]+)\\.([0-9]+)_.*", "\\2", ld_files)),
+        piece = as.integer(sub("^ukb_(chr)?([0-9]+)\\.([0-9]+)_.*", "\\3", ld_files))
     )
-
     if (!is.null(args$chr)) {
         loci <- loci[loci$chr == args$chr, ]
     }
-
     if (nrow(loci) == 0) stop("No loci found for chr ", args$chr)
-    return(loci)
+    loci <- loci[order(loci$chr, loci$piece), ]
+    snps <- vector("list", nrow(loci))
+
+    # first/last SNP position (GRCh37) + number of reference SNPs + SNP ids
+    for (i in seq_len(nrow(loci))) {
+        bim_file <- list.files(args$bim, pattern = paste0("^ukb_(chr)?", loci$chr[i], "\\.", loci$piece[i], "_.*\\.bim$"), full.names = TRUE)
+        bim <- fread(bim_file[1], select = c(2, 4))
+        loci$start_grch37[i] <- min(bim[[2]])
+        loci$stop_grch37[i]  <- max(bim[[2]])
+        loci$n_snps_ref[i]   <- nrow(bim)
+        snps[[i]]            <- bim[[1]]
+    }
+    return(list(loci = loci, snps = unique(unlist(snps))))
 }
 
 run_hdl_l <- function(args) {
 
+    panel <- get_loci(args)
+    loci  <- panel$loci
+
+    # keep only panel SNPs once (HDL.L drops the rest anyway)
     gwas1 <- read_sumstats(args$sumstats1)
     gwas2 <- read_sumstats(args$sumstats2)
-    loci  <- get_loci(args)
+    gwas1 <- gwas1[gwas1$SNP %in% panel$snps, ]
+    gwas2 <- gwas2[gwas2$SNP %in% panel$snps, ]
+    cat("Panel SNPs in GWAS 1:", nrow(gwas1), " GWAS 2:", nrow(gwas2), "\n")
     cat("Running HDL-L on", nrow(loci), "loci\n")
 
     # one locus -> one row (failed loci are skipped, not fatal)
@@ -99,10 +113,11 @@ run_hdl_l <- function(args) {
         )
     }
     results <- mclapply(seq_len(nrow(loci)), run_locus, mc.cores = args$cores)
+    results <- Filter(is.data.frame, results)    # drop failed/killed loci
     result  <- do.call(rbind, results)
     if (is.null(result)) stop("HDL-L failed for every locus!")
     result <- merge(loci, result, by = c("chr", "piece"))
-    return(result[order(result$locus), ])
+    return(result[order(result$chr, result$piece), ])
 }
 
 write_results <- function(result, args) {
@@ -111,7 +126,6 @@ write_results <- function(result, args) {
         pair         = args$out,
         trait1       = args$trait1,
         trait2       = args$trait2,
-        locus        = result$locus,
         chr          = result$chr,
         piece        = result$piece,
         start_grch37 = result$start_grch37,
@@ -129,16 +143,13 @@ write_results <- function(result, args) {
         rg_p         = result$P
     )
 
-    out$h2_1_p_fdr <- p.adjust(out$h2_1_p, method = "fdr")
-    out$h2_2_p_fdr <- p.adjust(out$h2_2_p, method = "fdr")
-    out$rg_p_fdr   <- p.adjust(out$rg_p, method = "fdr")
     write.table(out, paste0(args$out, ".hdll.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
     return(out)
 }
 
 main <- function() {
     args <- get_args()
-    result <- run_hdl(args = args)
+    result <- run_hdl_l(args = args)
     write_results(
         result = result,
         args = args

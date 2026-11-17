@@ -10,6 +10,7 @@ include { SHERLOCK_QC            } from '../modules/local/sherlock/qc'
 include { SHERLOCK_MUNGE         } from '../modules/local/sherlock/munge'
 include { SHERLOCK_LDSC          } from '../modules/local/sherlock/ldsc'
 include { SHERLOCK_HDL           } from '../modules/local/sherlock/hdl'
+include { SHERLOCK_HDLL          } from '../modules/local/sherlock/hdll'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -84,6 +85,7 @@ workflow SHERLOCK {
     def ch_munged = channel.empty()
     def ch_ldsc   = channel.empty()
     def ch_hdl    = channel.empty()
+    def ch_hdll   = channel.empty()
 
     if (steps.contains('rg')) {
 
@@ -126,6 +128,30 @@ workflow SHERLOCK {
     }
 
     //
+    // LOCAL GENETIC CORRELATION (lrg)
+    //
+
+    def lrg_methods = params.lrg_methods.tokenize(',')
+
+    if (steps.contains('lrg')) {
+
+        // ---- HDL-L: reads QC output directly (no munge), needs hdll_ref ----
+        if (lrg_methods.contains('hdll')) {
+
+            if (!params.hdll_ref) {
+                error("lrg_methods includes 'hdll' but hdll_ref is not set: add the HDL-L reference folder (with LD.path/ and bim.path/) to params.yaml.")
+            }
+            def ch_hdll_ref = channel.value(file(params.hdll_ref, checkIfExists: true))
+
+            // one tuple per pair on the QC'd sumstats (same as HDL)
+            pairFiles(ch_pairs, SHERLOCK_QC.out.sumstats).set { ch_pair_qc_lrg }
+
+            SHERLOCK_HDLL(ch_pair_qc_lrg, ch_hdll_ref)
+            ch_hdll = SHERLOCK_HDLL.out.results
+        }
+    }
+
+    //
     // Collate and save software versions
     //
     def topic_versions = channel.topic("versions")
@@ -158,6 +184,7 @@ workflow SHERLOCK {
     munged         = ch_munged                   // channel: [ meta, path(*.sumstats.gz) ]
     ldsc           = ch_ldsc                     // channel: [ meta1, meta2, path(*.ldsc.tsv) ]
     hdl            = ch_hdl                      // channel: [ meta1, meta2, path(*.hdl.tsv) ]
+    hdll           = ch_hdll                     // channel: [ meta1, meta2, path(*.hdll.tsv) ]
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
 

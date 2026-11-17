@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "sherlock_hdll"
+description: Local genetic correlation (rg) and local heritability between two traits, per genomic locus, with HDL-L
+keywords:
+  - gwas
+  - hdl-l
+  - local genetic correlation
+  - local heritability
+tools:
+  - "HDL":
+      description: "R package for genetic correlation and heritability using a full likelihood on LD eigen-decomposed reference panels; HDL.L runs it per locus"
+      homepage: "https://github.com/zhenin/HDL"
+      licence: ["GPL-3.0-or-later"]
+      identifier: ""
+
+input:
+  - - meta1:
+        type: map
+        description: Trait 1 info from the samplesheet (first by trait name), e.g. [ id:'AD', trait_type:'cc', ... ]
+    - sumstats1:
+        type: file
+        description: Trait 1 QC'd sumstats from SHERLOCK_QC (SNP CHR BP A1 A2 BETA SE P N ...); Z = BETA/SE is computed in the script
+        pattern: "*.qc.tsv.gz"
+    - meta2:
+        type: map
+        description: Trait 2 info from the samplesheet
+    - sumstats2:
+        type: file
+        description: Trait 2 QC'd sumstats from SHERLOCK_QC
+        pattern: "*.qc.tsv.gz"
+  - hdll_ref:
+      type: directory
+      description: HDL-L reference folder holding LD.path/ (*_LDSVD.rda) and bim.path/ (*.bim), unzipped from Zenodo 11001214
+
+output:
+  results:
+    - - meta1:
+          type: map
+          description: Trait 1 info from the samplesheet
+      - meta2:
+          type: map
+          description: Trait 2 info from the samplesheet
+      - "*.hdll.tsv":
+          type: file
+          description: One row per locus (chr, piece, start/stop_grch37, n_snps_ref, eigen_use, h2_1/2 + p, gcov, rg, rg_lower, rg_upper, rg_p); raw p-values, no multiple-testing correction
+          pattern: "*.hdll.tsv"
+  log:
+    - - meta1:
+          type: map
+          description: Trait 1 info from the samplesheet
+      - meta2:
+          type: map
+          description: Trait 2 info from the samplesheet
+      - "*_hdll.log":
+          type: file
+          description: HDL-L output for every locus (SNP coverage warnings, convergence messages, failed loci)
+          pattern: "*_hdll.log"
+
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process the versions were collected from
+      - HDL:
+          type: string
+          description: The tool name
+      - "Rscript -e 'cat(as.character(packageVersion(\"HDL\")))'":
+          type: eval
+          description: The command used to get the version
+
+authors:
+  - "@guillermocomesanacimadevila"
+maintainers:
+  - "@guillermocomesanacimadevila"
