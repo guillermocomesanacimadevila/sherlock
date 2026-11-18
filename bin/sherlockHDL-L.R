@@ -29,6 +29,7 @@ get_args <- function() {
         # settings
         make_option("--n0",         type = "double",    default = 0,    help = "Number of overlapping samples between the two GWAS (0 = no overlap)"),
         make_option("--eigen-cut",  type = "double",    default = 0.99, help = "Eigenvalue cut-off"),
+        make_option("--univ-thresh", type = "double",   default = 0.05, help = "Local h2 p-value threshold: rg p is only corrected where both traits pass"),
 
         # whole genome by default; --chr for testing one chromosome
         make_option("--chr",        type = "integer",   default = NULL, help = "Chromosome to run (empty = whole genome)"),
@@ -142,6 +143,19 @@ write_results <- function(result, args) {
         rg_upper     = result$Upper_bound_rg,
         rg_p         = result$P
     )
+
+    # per-pair multiple testing (whole genome only): both local h2 > 0 AND p < univ-thresh, rg estimated
+    # (h2 > 0 needed explicitly: HDL-L gives h2 p = 0 when h2 = 0)
+    tested <- !is.na(out$rg_p) & out$h2_1 > 0 & out$h2_2 > 0 &
+              out$h2_1_p < args$`univ-thresh` & out$h2_2_p < args$`univ-thresh`
+    tested[is.na(tested)] <- FALSE
+    out$tested    <- tested
+    out$rg_p_fdr  <- NA_real_
+    out$rg_p_bonf <- NA_real_
+    if (is.null(args$chr) && any(tested)) {
+        out$rg_p_fdr[tested]  <- p.adjust(out$rg_p[tested], method = "BH")
+        out$rg_p_bonf[tested] <- p.adjust(out$rg_p[tested], method = "bonferroni")
+    }
 
     write.table(out, paste0(args$out, ".hdll.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
     return(out)
