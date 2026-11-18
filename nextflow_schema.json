@@ -111,6 +111,22 @@
                     "description": "HDL-L reference folder holding LD.path/ and bim.path/.",
                     "help_text": "Needed when lrg_methods includes 'hdll'. Download LD.path.zip and bim.path.zip from https://doi.org/10.5281/zenodo.11001214 (~1.85 GB, UKB EUR) and unzip both into one folder.",
                     "fa_icon": "fas fa-folder"
+                },
+                "lava_ref": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "exists": true,
+                    "description": "LAVA LD reference folder holding <prefix>_chr*.bcor and <prefix>_chr*.info files.",
+                    "help_text": "Needed when lrg_methods includes 'lava'. Download the UK Biobank reference (lava-ukb-v1.1, GRCh37, ~14 GB zipped / 15 GB unzipped, EUR) from https://github.com/josefin-werme/LAVA/blob/main/REFERENCE.md and unzip all chromosome zips into one folder.",
+                    "fa_icon": "fas fa-folder"
+                },
+                "lava_loci": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "LAVA locus definition file (columns LOC CHR START STOP, optional SNPS).",
+                    "help_text": "Needed when lrg_methods includes 'lava'. Coordinates must be in the same build as lava_ref (GRCh37 for lava-ukb-v1.1), unless a SNPS column is given. The default LAVA file is support_data/blocks_s2500_m25_f1_w200.GRCh37_hg19.locfile in the LAVA repo.",
+                    "fa_icon": "fas fa-file"
                 }
             }
         },
@@ -139,13 +155,13 @@
             "title": "Local genetic correlation options",
             "type": "object",
             "fa_icon": "fas fa-map-marked-alt",
-            "description": "Settings for the local rg step (HDL-L).",
+            "description": "Settings for the local rg step (HDL-L, LAVA).",
             "properties": {
                 "lrg_methods": {
                     "type": "string",
-                    "default": "hdll",
-                    "pattern": "^((hdll)(,|$))+$",
-                    "description": "Comma-separated local rg methods to run, e.g. 'hdll'.",
+                    "default": "hdll,lava",
+                    "pattern": "^((hdll|lava)(,|$))+$",
+                    "description": "Comma-separated local rg methods to run, e.g. 'hdll', 'lava' or 'hdll,lava'.",
                     "fa_icon": "fas fa-list"
                 },
                 "lrg_hdll_n0": {
@@ -154,6 +170,14 @@
                     "description": "Number of samples shared by the two GWAS. Leave empty for no overlap (0).",
                     "help_text": "Unlike global HDL, HDL-L does not estimate sample overlap itself. Set it if the two GWAS share cohorts (e.g. both include UK Biobank).",
                     "fa_icon": "fas fa-users"
+                },
+                "lrg_lava_univ_thresh": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Local h2 p-value threshold for LAVA. Leave empty for the default (0.05).",
+                    "help_text": "LAVA only tests local rg at loci where both traits have local h2 p below this threshold. Per-pair FDR/Bonferroni columns are computed over those tested loci.",
+                    "fa_icon": "fas fa-filter"
                 }
             }
         },

@@ -6,6 +6,9 @@ suppressPackageStartupMessages({
   library(parallel)
 })
 
+# NOTE -> gien that the lava ref is GRCh37 -> if in params == target build == GRCh38 -> 
+# revert here jut for lava and then lift again
+
 get_args <- function() {
 
     option_list <- list(

@@ -1,0 +1,89 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "sherlock_lava"
+description: Local genetic correlation (rg) and local heritability between two traits, per genomic locus, with LAVA
+keywords:
+  - gwas
+  - lava
+  - local genetic correlation
+  - local heritability
+tools:
+  - "LAVA":
+      description: "R package for local genetic correlation (Local Analysis of [co]Variant Association); tests local h2 per trait and local rg between traits on LD reference data"
+      homepage: "https://github.com/josefin-werme/LAVA"
+      licence: ["All rights reserved"]
+      identifier: ""
+
+input:
+  - - meta1:
+        type: map
+        description: Trait 1 info from the samplesheet (first by trait name), e.g. [ id:'AD', trait_type:'cc', pop_prev:0.05, ... ]
+    - sumstats1:
+        type: file
+        description: Trait 1 QC'd sumstats from SHERLOCK_QC (SNP CHR BP A1 A2 BETA SE P N ...); LAVA computes Z from P and the sign of BETA
+        pattern: "*.qc.tsv.gz"
+    - meta2:
+        type: map
+        description: Trait 2 info from the samplesheet
+    - sumstats2:
+        type: file
+        description: Trait 2 QC'd sumstats from SHERLOCK_QC
+        pattern: "*.qc.tsv.gz"
+  - lava_ref:
+      type: directory
+      description: LAVA LD reference folder with per-chromosome <prefix>_chr*.bcor + <prefix>_chr*.info files (e.g. UK Biobank lava-ukb-v1.1, GRCh37)
+  - lava_loci:
+      type: file
+      description: Locus definition file (LOC CHR START STOP, optional SNPS); coordinates must match the build of lava_ref unless a SNPS column is given
+      pattern: "*.locfile"
+
+output:
+  univ:
+    - - meta1:
+          type: map
+          description: Trait 1 info from the samplesheet
+      - meta2:
+          type: map
+          description: Trait 2 info from the samplesheet
+      - "*.lava_univ.tsv":
+          type: file
+          description: Local h2 per locus per trait (locus, chr, start, stop, n_snps, n_pcs, phen, h2.obs, h2.latent, ascertained, p)
+          pattern: "*.lava_univ.tsv"
+  bivar:
+    - - meta1:
+          type: map
+          description: Trait 1 info from the samplesheet
+      - meta2:
+          type: map
+          description: Trait 2 info from the samplesheet
+      - "*.lava_bivar.tsv":
+          type: file
+          description: Local rg for loci where both traits pass --univ-thresh (locus info, phen1, phen2, rho + 95% CI, r2 + 95% CI, p, rg_p_fdr, rg_p_bonf); corrections are per pair over tested loci, whole-genome runs only (NA with --chr); empty file if no locus passes
+          pattern: "*.lava_bivar.tsv"
+  log:
+    - - meta1:
+          type: map
+          description: Trait 1 info from the samplesheet
+      - meta2:
+          type: map
+          description: Trait 2 info from the samplesheet
+      - "*_lava.log":
+          type: file
+          description: LAVA output (SNPs shared with the reference, dropped phenotypes with negative variance, failed loci)
+          pattern: "*_lava.log"
+
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process the versions were collected from
+      - LAVA:
+          type: string
+          description: The tool name
+      - "Rscript -e 'cat(as.character(packageVersion(\"LAVA\")))'":
+          type: eval
+          description: The command used to get the version
+
+authors:
+  - "@guillermocomesanacimadevila"
+maintainers:
+  - "@guillermocomesanacimadevila"

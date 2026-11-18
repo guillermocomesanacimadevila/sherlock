@@ -42,7 +42,7 @@ output:
           description: Trait 2 info from the samplesheet
       - "*.hdll.tsv":
           type: file
-          description: One row per locus (chr, piece, start/stop_grch37, n_snps_ref, eigen_use, h2_1/2 + p, gcov, rg, rg_lower, rg_upper, rg_p); raw p-values, no multiple-testing correction
+          description: One row per locus (chr, piece, start/stop_grch37, n_snps_ref, eigen_use, h2_1/2 + p, gcov, rg, rg_lower, rg_upper, rg_p, tested, rg_p_fdr, rg_p_bonf); corrections are per pair over tested loci (both local h2 > 0 and p < --univ-thresh), whole-genome runs only (NA with --chr)
           pattern: "*.hdll.tsv"
   log:
     - - meta1:

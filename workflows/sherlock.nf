@@ -11,6 +11,7 @@ include { SHERLOCK_MUNGE         } from '../modules/local/sherlock/munge'
 include { SHERLOCK_LDSC          } from '../modules/local/sherlock/ldsc'
 include { SHERLOCK_HDL           } from '../modules/local/sherlock/hdl'
 include { SHERLOCK_HDLL          } from '../modules/local/sherlock/hdll'
+include { SHERLOCK_LAVA          } from '../modules/local/sherlock/lava'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -86,6 +87,7 @@ workflow SHERLOCK {
     def ch_ldsc   = channel.empty()
     def ch_hdl    = channel.empty()
     def ch_hdll   = channel.empty()
+    def ch_lava   = channel.empty()
 
     if (steps.contains('rg')) {
 
@@ -135,6 +137,9 @@ workflow SHERLOCK {
 
     if (steps.contains('lrg')) {
 
+        // one tuple per pair on the QC'd sumstats (shared by HDL-L and LAVA)
+        def ch_pair_qc_lrg = pairFiles(ch_pairs, SHERLOCK_QC.out.sumstats)
+
         // ---- HDL-L: reads QC output directly (no munge), needs hdll_ref ----
         if (lrg_methods.contains('hdll')) {
 
@@ -143,11 +148,31 @@ workflow SHERLOCK {
             }
             def ch_hdll_ref = channel.value(file(params.hdll_ref, checkIfExists: true))
 
-            // one tuple per pair on the QC'd sumstats (same as HDL)
-            pairFiles(ch_pairs, SHERLOCK_QC.out.sumstats).set { ch_pair_qc_lrg }
-
             SHERLOCK_HDLL(ch_pair_qc_lrg, ch_hdll_ref)
             ch_hdll = SHERLOCK_HDLL.out.results
+        }
+
+        // ---- LAVA: reads QC output directly (no munge), needs lava_loci, lava_ref ----
+        if (lrg_methods.contains('lava')) {
+
+            if (!params.lava_ref) {
+                error("lrg_methods includes 'lava' but lava_ref is not set: add the LAVA reference folder (with <prefix>_chr*.bcor/.info files, e.g. lava-ukb-v1.1) to params.yaml.")
+            }
+
+            if (!params.lava_loci) {
+                error("lrg_methods includes 'lava' but lava_loci is not set: add the LAVA locus file (LOC CHR START STOP, same build as lava_ref, e.g. blocks_s2500_m25_f1_w200.GRCh37_hg19.locfile) to params.yaml.")
+            }
+
+            def ch_lava_ref  = channel.value(file(params.lava_ref,  checkIfExists: true))
+            def ch_lava_loci = channel.value(file(params.lava_loci, checkIfExists: true))
+
+            // sherlock lava
+            SHERLOCK_LAVA(
+                ch_pair_qc_lrg,
+                ch_lava_ref,
+                ch_lava_loci
+            )
+            ch_lava = SHERLOCK_LAVA.out.bivar
         }
     }
 
@@ -185,6 +210,7 @@ workflow SHERLOCK {
     ldsc           = ch_ldsc                     // channel: [ meta1, meta2, path(*.ldsc.tsv) ]
     hdl            = ch_hdl                      // channel: [ meta1, meta2, path(*.hdl.tsv) ]
     hdll           = ch_hdll                     // channel: [ meta1, meta2, path(*.hdll.tsv) ]
+    lava           = ch_lava                     // channel: [ meta1, meta2, path(*.lava_bivar.tsv) ]
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
 

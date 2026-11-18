@@ -29,8 +29,9 @@ rg_methods: ldsc,hdl                            # rg methods to run; use "ldsc" 
 rg_hdl_nref: 335265                             # sample size of the HDL panel (335265 for all UKB panels)
 
 # ---- lrg ----
-lrg_methods: hdll                               # local rg methods to run
+lrg_methods: hdll,lava                          # local rg methods to run; use "hdll" to skip LAVA (no LAVA reference needed)
 # lrg_hdll_n0: 0                                # samples shared by the two GWAS (leave out = 0, no overlap)
+# lrg_lava_univ_thresh: 0.05                    # local h2 p threshold for the LAVA rg test (leave out = 0.05)
 
 # references
 ancestry: EUR                                   # population of both GWAS; ref_panel must match
@@ -40,3 +41,5 @@ hm3: /path/to/w_hm3.snplist                     # HapMap3 SNP list for LDSC mung
 ldsc_ref: /path/to/eur_w_ld_chr                 # LDSC LD score folder (rg step)
 hdl_ref: /path/to/UKB_imputed_SVD_eigen99_extraction   # HDL panel folder (rg step, EUR only), from github.com/zhenin/HDL/wiki/Reference-panels
 hdll_ref: /path/to/hdll_ref                    # HDL-L folder with LD.path/ and bim.path/ (lrg step, EUR only), from doi.org/10.5281/zenodo.11001214
+lava_ref: /path/to/lava_ref                    # LAVA folder with lava-ukb-v1.1_chr*.bcor/.info (lrg step, EUR, GRCh37), from github.com/josefin-werme/LAVA/blob/main/REFERENCE.md
+lava_loci: /path/to/blocks_s2500_m25_f1_w200.GRCh37_hg19.locfile   # LAVA locus file (same build as lava_ref), from the LAVA repo support_data/
