@@ -113,8 +113,17 @@ run_hdl_l <- function(args) {
             }
         )
     }
-    results <- mclapply(seq_len(nrow(loci)), run_locus, mc.cores = args$cores)
-    results <- Filter(is.data.frame, results)    # drop failed/killed loci
+    # a killed worker (e.g. out of memory) silently returns NULL for all its loci;
+    # R only warns "did not deliver results" -> turn that warning into an error
+    results <- withCallingHandlers(
+        mclapply(seq_len(nrow(loci)), run_locus, mc.cores = args$cores),
+        warning = function(w) {
+            if (grepl("did not deliver", conditionMessage(w))) {
+                stop("a parallel worker died (likely out of memory): increase memory or lower --cores", call. = FALSE)
+            }
+        }
+    )
+    results <- Filter(is.data.frame, results)    # drop failed loci
     result  <- do.call(rbind, results)
     if (is.null(result)) stop("HDL-L failed for every locus!")
     result <- merge(loci, result, by = c("chr", "piece"))

@@ -122,13 +122,21 @@ run_lava <- function(info_file, args) {
         return(list(univ = univ, bivar = bivar))
     }
 
-    # failed loci == skipped
-    res <- mclapply(seq_len(nrow(loci)), function(i) {
-        tryCatch(run_locus(i), error = function(e) {
-            message("Locus ", loci$LOC[i], " failed: ", conditionMessage(e))
-            return(NULL)
-        })
-    }, mc.cores = args$cores)
+    # failed loci == skipped; a killed worker (e.g. out of memory) silently returns NULL for all its loci
+    # and R only warns "did not deliver results" -> turn that warning into an error
+    res <- withCallingHandlers(
+        mclapply(seq_len(nrow(loci)), function(i) {
+            tryCatch(run_locus(i), error = function(e) {
+                message("Locus ", loci$LOC[i], " failed: ", conditionMessage(e))
+                return(NULL)
+            })
+        }, mc.cores = args$cores),
+        warning = function(w) {
+            if (grepl("did not deliver", conditionMessage(w))) {
+                stop("a parallel worker died (likely out of memory): increase memory or lower --cores", call. = FALSE)
+            }
+        }
+    )
     cat("Loci skipped (too few SNPs or failed):", sum(sapply(res, is.null)), "\n")
 
     univ  <- do.call(rbind, lapply(res, function(r) r$univ))
