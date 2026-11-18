@@ -116,7 +116,7 @@ run_hdl_l <- function(args) {
     # a killed worker (e.g. out of memory) silently returns NULL for all its loci;
     # R only warns "did not deliver results" -> turn that warning into an error
     results <- withCallingHandlers(
-        mclapply(seq_len(nrow(loci)), run_locus, mc.cores = args$cores),
+        mclapply(seq_len(nrow(loci)), run_locus, mc.cores = args$cores, mc.preschedule = FALSE),
         warning = function(w) {
             if (grepl("did not deliver", conditionMessage(w))) {
                 stop("a parallel worker died (likely out of memory): increase memory or lower --cores", call. = FALSE)

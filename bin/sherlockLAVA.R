@@ -126,11 +126,13 @@ run_lava <- function(info_file, args) {
     # and R only warns "did not deliver results" -> turn that warning into an error
     res <- withCallingHandlers(
         mclapply(seq_len(nrow(loci)), function(i) {
-            tryCatch(run_locus(i), error = function(e) {
+            res_i <- tryCatch(run_locus(i), error = function(e) {
                 message("Locus ", loci$LOC[i], " failed: ", conditionMessage(e))
                 return(NULL)
             })
-        }, mc.cores = args$cores),
+            message("Locus ", loci$LOC[i], " done")
+            return(res_i)
+        }, mc.cores = args$cores, mc.preschedule = FALSE),
         warning = function(w) {
             if (grepl("did not deliver", conditionMessage(w))) {
                 stop("a parallel worker died (likely out of memory): increase memory or lower --cores", call. = FALSE)
