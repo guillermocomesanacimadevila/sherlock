@@ -64,7 +64,7 @@ workflow PIPELINE_INITIALISATION {
 \033[0;34m  | \\| |       \\__, \\__/ |  \\ |___     \033[0;32m\\`-._,-`-,\033[0m
                                         \033[0;32m`._,._,\'\033[0m
 \033[0;35m  nf-core/sherlock ${workflow.manifest.version}\033[0m
-\033[2m  Developed by Guillermo Comesaña et al., UK DRI Cardiff\033[0m
+\033[2m  G. Comesaña et al. · UK DRI Cardiff\033[0m
 -\033[2m----------------------------------------------------\033[0m-
 """
     after_text = """${workflow.manifest.doi ? "\n* The pipeline\n" : ""}${workflow.manifest.doi.tokenize(",").collect { doi -> "    https://doi.org/${doi.trim().replace('https://doi.org/','')}"}.join("\n")}${workflow.manifest.doi ? "\n" : ""}
