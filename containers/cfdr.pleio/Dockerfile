@@ -11,21 +11,26 @@ LABEL org.opencontainers.image.title="sherlock-cfdr.pleio" \
 
 USER root
 
-# install dependencies + all R deps (all on conda-forge; cfdr.pleio is pure R -> no compiler needed)
+# install dependencies + R deps from conda-forge (binom from CRAN below; cfdr.pleio is pure R -> no compiler needed)
 RUN micromamba install -y -n base -c conda-forge \
         r-base=4.4 \
+        r-r.utils \
         procps-ng \
         curl \
         r-data.table r-matrix r-matrixstats r-r6 \
-        r-binom r-interp r-optparse \
+        r-interp r-optparse \
     && micromamba clean -a -y
 
 ENV PATH=/opt/conda/bin:$PATH
 
-# cfdr.pleio at the pinned commit (package is the repo root); vignettes not built
+# r-binom has no linux-aarch64 build on conda-forge -> install from CRAN (pure R, no compiler)
+RUN Rscript -e 'install.packages("binom", repos = "https://cloud.r-project.org")' \
+    && Rscript -e 'library(binom)'
+
+# cfdr.pleio at the pinned commit (package is the repo root)
 RUN curl -sL https://github.com/alexploner/cfdr.pleio/archive/${CFDRPLEIO_COMMIT}.tar.gz | tar -xz -C /tmp \
-    && R CMD INSTALL --no-build-vignettes /tmp/cfdr.pleio-${CFDRPLEIO_COMMIT} \
+    && R CMD INSTALL /tmp/cfdr.pleio-${CFDRPLEIO_COMMIT} \
     && rm -rf /tmp/cfdr.pleio-*
 
 # verify!!!!!!
-RUN Rscript -e 'library(cfdr.pleio); library(optparse); library(data.table)'
+RUN Rscript -e 'library(cfdr.pleio); library(optparse); library(data.table); library(R.utils)'
