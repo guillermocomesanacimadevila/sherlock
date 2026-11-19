@@ -1,0 +1,85 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "sherlock_conjfdr"
+description: Shared genetic loci between two traits with conditional and conjunctional FDR (conjFDR), using cfdr.pleio
+keywords:
+  - gwas
+  - pleiotropy
+  - conjfdr
+  - conditional fdr
+tools:
+  - "cfdr.pleio":
+      description: "R implementation of conditional / conjunctional FDR for pleiotropy between two GWAS (pleioFDR method), with random LD pruning on a 1000 Genomes reference"
+      homepage: "https://github.com/alexploner/cfdr.pleio"
+      licence: ["GPL-3.0-or-later"]
+      identifier: ""
+
+input:
+  - - meta1:
+        type: map
+        description: Trait 1 info from the samplesheet (first by trait name), e.g. [ id:'AD', trait_type:'cc', ... ]
+    - sumstats1:
+        type: file
+        description: Trait 1 QC'd sumstats from SHERLOCK_QC (SNP CHR BP A1 A2 BETA SE P N ...); conjFDR uses SNP, BETA and P
+        pattern: "*.qc.tsv.gz"
+    - meta2:
+        type: map
+        description: Trait 2 info from the samplesheet
+    - sumstats2:
+        type: file
+        description: Trait 2 QC'd sumstats from SHERLOCK_QC
+        pattern: "*.qc.tsv.gz"
+  - conjfdr_ref:
+      type: directory
+      description: cfdr.pleio reference folder (Zenodo 5750318 genref; all_chr_perVariant.rds + chr01..22_LDpairs.rds, 1000G phase 3 EUR, GRCh37); SNPs matched by rsID
+
+output:
+  cfdr_all:
+    - - meta1:
+          type: map
+          description: Trait 1 info from the samplesheet
+      - meta2:
+          type: map
+          description: Trait 2 info from the samplesheet
+      - "*.conjfdr.all.tsv":
+          type: file
+          description: All SNPs shared by both traits and the reference (SNP CHR BP A1 A2 BETA1 LOG10PVAL1 BETA2 LOG10PVAL2 cfdr12 cfdr21 conj_fdr direction); positions from trait 1 (target build), BETA2 aligned to trait 1 A1
+          pattern: "*.conjfdr.all.tsv"
+  cfdr_pass:
+    - - meta1:
+          type: map
+          description: Trait 1 info from the samplesheet
+      - meta2:
+          type: map
+          description: Trait 2 info from the samplesheet
+      - "*.conjfdr.pass.tsv":
+          type: file
+          description: Same columns as cfdr_all, only SNPs with conj_fdr < --conjfdr-thresh (default 0.05); input to the loci step; header only if none pass
+          pattern: "*.conjfdr.pass.tsv"
+  log:
+    - - meta1:
+          type: map
+          description: Trait 1 info from the samplesheet
+      - meta2:
+          type: map
+          description: Trait 2 info from the samplesheet
+      - "*_conjfdr.log":
+          type: file
+          description: cfdr.pleio output (SNPs matched to the reference, GC correction factors, SNPs dropped for allele mismatch, SNPs passing the threshold)
+          pattern: "*_conjfdr.log"
+
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process the versions were collected from
+      - cfdr.pleio:
+          type: string
+          description: The tool name
+      - "Rscript -e 'cat(as.character(packageVersion(\"cfdr.pleio\")))'":
+          type: eval
+          description: The command used to get the version
+
+authors:
+  - "@guillermocomesanacimadevila"
+maintainers:
+  - "@guillermocomesanacimadevila"

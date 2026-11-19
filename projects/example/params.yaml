@@ -11,7 +11,7 @@ input: projects/example/gwas_pair.csv
 outdir: projects/example/results
 
 # steps to run (QC always runs)
-steps: qc,rg,lrg
+steps: qc,rg,lrg,pleio
 
 # ---- qc ----
 target_build: GRCh38                            # build every GWAS is lifted to (GRCh37 or GRCh38)
@@ -33,6 +33,14 @@ lrg_methods: hdll,lava                          # local rg methods to run; use "
 # lrg_hdll_n0: 0                                # samples shared by the two GWAS (leave out = 0, no overlap)
 # lrg_lava_univ_thresh: 0.05                    # local h2 p threshold for the LAVA rg test (leave out = 0.05)
 
+# ---- pleio ----
+pleio_methods: conjfdr                          # pleiotropy methods to run (only conjfdr for now)
+# pleio_conjfdr_n_iter: 500                     # random LD-pruning iterations (leave out = 500)
+# pleio_conjfdr_seed: 154226                    # pruning seed (leave out = 154226)
+# pleio_conjfdr_maf_min: 0.005                  # min MAF in the reference (leave out = 0.005)
+# pleio_conjfdr_thresh: 0.05                    # conj_fdr threshold for the pass file (leave out = 0.05)
+                                                # MHC/APOE exclusion follows qc_drop_mhc / qc_drop_apoe
+
 # references
 ancestry: EUR                                   # population of both GWAS; ref_panel must match
 ref_panel: /path/to/1000G.EUR.QC.ALL            # PLINK prefix (.bed/.bim/.fam)
@@ -43,3 +51,4 @@ hdl_ref: /path/to/UKB_imputed_SVD_eigen99_extraction   # HDL panel folder (rg st
 hdll_ref: /path/to/hdll_ref                    # HDL-L folder with LD.path/ and bim.path/ (lrg step, EUR only), from doi.org/10.5281/zenodo.11001214
 lava_ref: /path/to/lava_ref                    # LAVA folder with lava-ukb-v1.1_chr*.bcor/.info (lrg step, EUR, GRCh37), from github.com/josefin-werme/LAVA/blob/main/REFERENCE.md
 lava_loci: /path/to/blocks_s2500_m25_f1_w200.GRCh37_hg19.locfile   # LAVA locus file (same build as lava_ref), from the LAVA repo support_data/
+conjfdr_ref: /path/to/conjfdr_ref               # cfdr.pleio genref folder (all_chr_perVariant.rds + chrXX_LDpairs.rds, EUR, GRCh37), from doi.org/10.5281/zenodo.5750318

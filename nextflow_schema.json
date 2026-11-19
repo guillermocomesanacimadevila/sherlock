@@ -35,8 +35,8 @@
                 "steps": {
                     "type": "string",
                     "default": "qc",
-                    "pattern": "^((qc|rg|lrg|loci|coloc|smr|report)(,|$))+$",
-                    "description": "Comma-separated list of steps to run, e.g. 'qc,rg,lrg'. QC always runs.",
+                    "pattern": "^((qc|rg|lrg|pleio|loci|coloc|smr|report)(,|$))+$",
+                    "description": "Comma-separated list of steps to run, e.g. 'qc,rg,lrg,pleio'. QC always runs.",
                     "fa_icon": "fas fa-list-ol"
                 },
                 "outdir": {
@@ -127,6 +127,14 @@
                     "description": "LAVA locus definition file (columns LOC CHR START STOP, optional SNPS).",
                     "help_text": "Needed when lrg_methods includes 'lava'. Coordinates must be in the same build as lava_ref (GRCh37 for lava-ukb-v1.1), unless a SNPS column is given. The default LAVA file is support_data/blocks_s2500_m25_f1_w200.GRCh37_hg19.locfile in the LAVA repo.",
                     "fa_icon": "fas fa-file"
+                },
+                "conjfdr_ref": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "exists": true,
+                    "description": "cfdr.pleio reference folder holding all_chr_perVariant.rds and chr01..22_LDpairs.rds.",
+                    "help_text": "Needed when pleio_methods includes 'conjfdr'. Download genref.zip from https://doi.org/10.5281/zenodo.5750318 (~3 GB, 1000 Genomes phase 3 EUR, GRCh37) and unzip it. SNPs are matched by rsID, so the GWAS build does not matter.",
+                    "fa_icon": "fas fa-folder"
                 }
             }
         },
@@ -177,6 +185,48 @@
                     "maximum": 1,
                     "description": "Local h2 p-value threshold for LAVA. Leave empty for the default (0.05).",
                     "help_text": "LAVA only tests local rg at loci where both traits have local h2 p below this threshold. Per-pair FDR/Bonferroni columns are computed over those tested loci.",
+                    "fa_icon": "fas fa-filter"
+                }
+            }
+        },
+        "pleio_options": {
+            "title": "Pleiotropy options",
+            "type": "object",
+            "fa_icon": "fas fa-project-diagram",
+            "description": "Settings for the pleiotropy step (conjFDR). MHC and APOE exclusion follow qc_drop_mhc and qc_drop_apoe.",
+            "properties": {
+                "pleio_methods": {
+                    "type": "string",
+                    "default": "conjfdr",
+                    "pattern": "^((conjfdr)(,|$))+$",
+                    "description": "Comma-separated pleiotropy methods to run. Only 'conjfdr' for now.",
+                    "fa_icon": "fas fa-list"
+                },
+                "pleio_conjfdr_n_iter": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of random LD-pruning iterations. Leave empty for the default (500).",
+                    "help_text": "More iterations give more stable FDR values but need more memory (about SNPs x iterations x 4 bytes).",
+                    "fa_icon": "fas fa-redo"
+                },
+                "pleio_conjfdr_seed": {
+                    "type": "integer",
+                    "description": "Random seed for LD pruning. Leave empty for the default (154226).",
+                    "fa_icon": "fas fa-seedling"
+                },
+                "pleio_conjfdr_maf_min": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.5,
+                    "description": "Minimum MAF in the reference panel. Leave empty for the default (0.005).",
+                    "fa_icon": "fas fa-filter"
+                },
+                "pleio_conjfdr_thresh": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "conjFDR threshold for the pass file. Leave empty for the default (0.05).",
+                    "help_text": "SNPs with conj_fdr below this value go to *.conjfdr.pass.tsv, which the loci step uses.",
                     "fa_icon": "fas fa-filter"
                 }
             }
@@ -240,12 +290,14 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Remove the MHC region (chr6:25-34 Mb).",
+                    "help_text": "Also excludes the MHC from conjFDR (chr6:25.1-33.9 Mb on the GRCh37 reference).",
                     "fa_icon": "fas fa-cut"
                 },
                 "qc_drop_apoe": {
                     "type": "boolean",
                     "default": false,
                     "description": "Remove the APOE region (chr19).",
+                    "help_text": "Also excludes APOE +-1 Mb from conjFDR (chr19 on the GRCh37 reference).",
                     "fa_icon": "fas fa-cut"
                 }
             }
@@ -387,6 +439,9 @@
         },
         {
             "$ref": "#/$defs/lrg_options"
+        },
+        {
+            "$ref": "#/$defs/pleio_options"
         },
         {
             "$ref": "#/$defs/qc_options"

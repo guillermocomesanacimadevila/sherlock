@@ -12,6 +12,7 @@ include { SHERLOCK_LDSC          } from '../modules/local/sherlock/ldsc'
 include { SHERLOCK_HDL           } from '../modules/local/sherlock/hdl'
 include { SHERLOCK_HDLL          } from '../modules/local/sherlock/hdll'
 include { SHERLOCK_LAVA          } from '../modules/local/sherlock/lava'
+include { SHERLOCK_CONJFDR       } from '../modules/local/sherlock/conjfdr'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -83,11 +84,12 @@ workflow SHERLOCK {
     def rg_methods = params.rg_methods.tokenize(',')
 
     // munged sumstats + rg results, stay empty if rg (or that method) isn't run
-    def ch_munged = channel.empty()
-    def ch_ldsc   = channel.empty()
-    def ch_hdl    = channel.empty()
-    def ch_hdll   = channel.empty()
-    def ch_lava   = channel.empty()
+    def ch_munged  = channel.empty()
+    def ch_ldsc    = channel.empty()
+    def ch_hdl     = channel.empty()
+    def ch_hdll    = channel.empty()
+    def ch_lava    = channel.empty()
+    def ch_conjfdr = channel.empty()
 
     if (steps.contains('rg')) {
 
@@ -177,6 +179,35 @@ workflow SHERLOCK {
     }
 
     //
+    // PLEIOTROPY (pleio)
+    //
+
+    def pleio_methods = params.pleio_methods.tokenize(',')
+
+    if (steps.contains('pleio')) {
+
+        // one tuple per pair on the QC'd sumstats (shared by conjFDR and PLEIO later)
+        def ch_pair_qc_pleio = pairFiles(ch_pairs, SHERLOCK_QC.out.sumstats)
+
+        // ----- conjFDR
+        if (pleio_methods.contains('conjfdr')) {
+
+            if (!params.conjfdr_ref) {
+                error("pleio_methods includes 'conjfdr' but conjfdr_ref is not set: add the cfdr.pleio reference folder (with all_chr_perVariant.rds and chr01..22_LDpairs.rds, unzipped genref.zip from Zenodo 5750318) to params.yaml.")
+            }
+
+            def ch_conjfdr_ref = channel.value(file(params.conjfdr_ref, checkIfExists: true))
+
+            // execute conjFDR module
+            SHERLOCK_CONJFDR(
+                ch_pair_qc_pleio,
+                ch_conjfdr_ref
+            )
+            ch_conjfdr = SHERLOCK_CONJFDR.out.cfdr_pass
+        }
+    }
+
+    //
     // Collate and save software versions
     //
     def topic_versions = channel.topic("versions")
@@ -211,6 +242,7 @@ workflow SHERLOCK {
     hdl            = ch_hdl                      // channel: [ meta1, meta2, path(*.hdl.tsv) ]
     hdll           = ch_hdll                     // channel: [ meta1, meta2, path(*.hdll.tsv) ]
     lava           = ch_lava                     // channel: [ meta1, meta2, path(*.lava_bivar.tsv) ]
+    conjfdr        = ch_conjfdr                  // channel: [ meta1, meta2, path(*.conjfdr.pass.tsv) ]
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
 
