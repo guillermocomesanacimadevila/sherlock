@@ -3,7 +3,7 @@ process SHERLOCK_PLEIO {
     tag "${meta1.id}_${meta2.id}"
     label 'process_medium'
 
-    container "ghcr.io/guillermocomesanacimadevila/sherlock-pleio:0.0.0-b18d507"
+    container "ghcr.io/guillermocomesanacimadevila/sherlock-cfdr.pleio:0.0.0.9100-76d5085"
 
     input:
     tuple val(meta1), path(sumstats1), val(meta2), path(sumstats2)

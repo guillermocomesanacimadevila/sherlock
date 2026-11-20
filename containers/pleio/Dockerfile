@@ -9,7 +9,7 @@ LABEL org.opencontainers.image.title="sherlock-pleio" \
       org.opencontainers.image.description="PLEIO (+ LDSC for ldsc_preprocess) for nf-core/sherlock" \
       org.opencontainers.image.source="https://github.com/guillermocomesanacimadevila/sherlock" \
       org.opencontainers.image.licenses="NOASSERTION" \
-      org.opencontainers.image.version="0.0.0-b18d507"
+      org.opencontainers.image.version="0.0.1-b18d507"
 
 USER root
 
@@ -22,11 +22,16 @@ RUN micromamba install -y -n base -c conda-forge \
 
 ENV PATH=/opt/conda/envs/pleio/bin:/opt/conda/bin:$PATH
 
-# fix python version for LDSC preprocessing part
-RUN micromamba create -y -n ldsc -c conda-forge -c bioconda \
+# python 2.7 for ldsc_preprocess.py + the cloned LDSC code
+# pandas 0.24.2 (last for py2.7): ldsc_preprocess uses .to_numpy() (pandas >= 0.24);
+# bioconda ldsc 1.0.1 pins pandas < 0.21, so install LDSC's deps directly instead
+RUN micromamba create -y -n ldsc -c conda-forge \
         python=2.7 \
-        ldsc=1.0.1 \
-    && micromamba clean -a -y 
+        pandas=0.24.2 \
+        numpy=1.16 \
+        scipy=1.2 \
+        bitarray \
+    && micromamba clean -a -y
 
 # fix python script to PY >=3.7 for pleio side of things
 RUN micromamba create -y -n pleio -c conda-forge \
@@ -61,4 +66,5 @@ RUN printf '#!/bin/bash\nexec /opt/conda/envs/ldsc/bin/python /opt/pleio/ldsc_pr
 RUN grep -q "^\s*pass$" /opt/pleio/ldsc_preprocess.py \
     && pleio_preprocess -h > /dev/null \
     && pleio -h > /dev/null \
-    && python3 -c "import polars"
+    && python3 -c "import polars" \
+    && /opt/conda/envs/ldsc/bin/python -c "import pandas; pandas.Series([1]).to_numpy()"
