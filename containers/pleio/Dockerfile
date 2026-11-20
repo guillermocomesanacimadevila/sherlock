@@ -20,7 +20,7 @@ RUN micromamba install -y -n base -c conda-forge \
         gzip \
     && micromamba clean -a -y
 
-ENV PATH=/opt/conda/bin:$PATH
+ENV PATH=/opt/conda/envs/pleio/bin:/opt/conda/bin:$PATH
 
 # fix python version for LDSC preprocessing part
 RUN micromamba create -y -n ldsc -c conda-forge -c bioconda \
@@ -34,6 +34,7 @@ RUN micromamba create -y -n pleio -c conda-forge \
         numpy=1.26 \
         pandas=1.5 \
         scipy=1.10 \
+        polars=1.43.0 \
     && micromamba clean -a -y
 
 # clone pleio repo 
@@ -59,4 +60,5 @@ RUN printf '#!/bin/bash\nexec /opt/conda/envs/ldsc/bin/python /opt/pleio/ldsc_pr
 # verify!!!!!!
 RUN grep -q "^\s*pass$" /opt/pleio/ldsc_preprocess.py \
     && pleio_preprocess -h > /dev/null \
-    && pleio -h > /dev/null
+    && pleio -h > /dev/null \
+    && python3 -c "import polars"

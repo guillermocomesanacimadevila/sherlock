@@ -1,0 +1,94 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "sherlock_pleio"
+description: Multi-trait association test for pleiotropic SNPs between two traits with PLEIO (+ BLUP per-trait effects), using LDSC for the genetic covariance and environmental correlation
+keywords:
+  - gwas
+  - pleiotropy
+  - pleio
+  - multi-trait
+  - ldsc
+tools:
+  - "pleio":
+      description: "Pleiotropic Locus Exploration and Interpretation using Optimal test: per-SNP variance-component test across traits from GWAS summary statistics, p-values from importance sampling; optional BLUP effect sizes per trait"
+      homepage: "https://github.com/cuelee/pleio"
+      documentation: "https://github.com/cuelee/pleio/wiki"
+      doi: "10.1016/j.ajhg.2020.11.017"
+      licence: ["NOASSERTION"]
+      identifier: ""
+  - "ldsc":
+      description: "LD score regression, used by PLEIO's ldsc_preprocess.py to estimate heritability, genetic covariance and environmental correlation between the traits"
+      homepage: "https://github.com/bulik/ldsc"
+      doi: "10.1038/ng.3211"
+      licence: ["GPL-3.0-only"]
+      identifier: ""
+
+input:
+  - - meta1:
+        type: map
+        description: Trait 1 info from the samplesheet (first by trait name), e.g. [ id:'AD', trait_type:'cc', pop_prev:0.05, ... ]; trait_type and pop_prev are used (pop_prev required for cc)
+    - sumstats1:
+        type: file
+        description: Trait 1 QC'd sumstats from SHERLOCK_QC (SNP CHR BP A1 A2 BETA SE P N ...); PLEIO uses Z = BETA/SE, N and P
+        pattern: "*.qc.tsv.gz"
+    - meta2:
+        type: map
+        description: Trait 2 info from the samplesheet
+    - sumstats2:
+        type: file
+        description: Trait 2 QC'd sumstats from SHERLOCK_QC; alleles aligned to trait 1 (swapped -> Z flipped, mismatched -> dropped)
+        pattern: "*.qc.tsv.gz"
+  - ldsc_ref:
+      type: directory
+      description: LDSC LD score folder (eur_w_ld_chr; 1..22.l2.ldscore.gz + .M_5_50), same as the rg step; used for both --ref-ld-chr and --w-ld-chr
+
+output:
+  pleio_all:
+    - - meta1:
+          type: map
+          description: Trait 1 info from the samplesheet
+      - meta2:
+          type: map
+          description: Trait 2 info from the samplesheet
+      - "*.pleio.all.tsv":
+          type: file
+          description: All SNPs tested (SNP CHR BP A1 A2 Z1 P1 Z2 P2 tausq pleio_stat LS_stat pleio_p LS_p [BLUP1 BLUP1_SE BLUP2 BLUP2_SE] direction shared novel); positions from trait 1 (target build), Z2 aligned to trait 1 A1
+          pattern: "*.pleio.all.tsv"
+  pleio_pass:
+    - - meta1:
+          type: map
+          description: Trait 1 info from the samplesheet
+      - meta2:
+          type: map
+          description: Trait 2 info from the samplesheet
+      - "*.pleio.pass.tsv":
+          type: file
+          description: Same columns as pleio_all, only SNPs with pleio_p < --thresh (default 5e-8); input to the loci step; header only if none pass
+          pattern: "*.pleio.pass.tsv"
+  log:
+    - - meta1:
+          type: map
+          description: Trait 1 info from the samplesheet
+      - meta2:
+          type: map
+          description: Trait 2 info from the samplesheet
+      - "*_pleio.log":
+          type: file
+          description: Script + tool output (SNPs in both traits, allele mismatches, LDSC h2/rg/intercepts, PLEIO progress, SNPs passing / shared / novel)
+          pattern: "*_pleio.log"
+
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The process the versions were collected from
+      - pleio:
+          type: string
+          description: The tool name
+      - b18d507:
+          type: string
+          description: The tool version (pinned upstream commit; PLEIO has no releases)
+
+authors:
+  - "@guillermocomesanacimadevila"
+maintainers:
+  - "@guillermocomesanacimadevila"

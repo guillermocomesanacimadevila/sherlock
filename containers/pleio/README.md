@@ -14,7 +14,7 @@ The image has two environments, because LDSC is Python 2.7 and PLEIO is Python 3
 | Command            | Runs                              | Environment                               |
 | ------------------ | --------------------------------- | ----------------------------------------- |
 | `pleio_preprocess` | `/opt/pleio/ldsc_preprocess.py`   | `ldsc`: python 2.7 + bioconda ldsc 1.0.1  |
-| `pleio`            | `/opt/pleio/pleio.py`             | `pleio`: python 3.10, numpy 1.26, pandas 1.5, scipy 1.10 |
+| `pleio`            | `/opt/pleio/pleio.py`             | `pleio`: python 3.10, numpy 1.26, pandas 1.5, scipy 1.10, polars 1.43.0 (also on PATH for `bin/sherlockPLEIO.py`) |
 
 One change to upstream code: `ldsc_preprocess.py` creates `ldsc/__init__.py` next to itself on every run, which fails on
 read-only images (Apptainer/Singularity). The file is created at build time and that line is replaced with `pass`.

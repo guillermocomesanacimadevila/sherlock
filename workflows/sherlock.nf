@@ -13,6 +13,7 @@ include { SHERLOCK_HDL           } from '../modules/local/sherlock/hdl'
 include { SHERLOCK_HDLL          } from '../modules/local/sherlock/hdll'
 include { SHERLOCK_LAVA          } from '../modules/local/sherlock/lava'
 include { SHERLOCK_CONJFDR       } from '../modules/local/sherlock/conjfdr'
+include { SHERLOCK_PLEIO         } from '../modules/local/sherlock/pleio'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -90,6 +91,7 @@ workflow SHERLOCK {
     def ch_hdll    = channel.empty()
     def ch_lava    = channel.empty()
     def ch_conjfdr = channel.empty()
+    def ch_pleio   = channel.empty()
 
     if (steps.contains('rg')) {
 
@@ -186,7 +188,7 @@ workflow SHERLOCK {
 
     if (steps.contains('pleio')) {
 
-        // one tuple per pair on the QC'd sumstats (shared by conjFDR and PLEIO later)
+        // one tuple per pair on the QC'd sumstats (shared by conjFDR and PLEIO)
         def ch_pair_qc_pleio = pairFiles(ch_pairs, SHERLOCK_QC.out.sumstats)
 
         // ----- conjFDR
@@ -204,6 +206,36 @@ workflow SHERLOCK {
                 ch_conjfdr_ref
             )
             ch_conjfdr = SHERLOCK_CONJFDR.out.cfdr_pass
+        }
+
+        // ----- PLEIO
+        if (pleio_methods.contains('pleio')) {
+
+            if (!params.ldsc_ref) {
+                error("pleio_methods includes 'pleio' but ldsc_ref is not set: add the LD score folder (eur_w_ld_chr/) to params.yaml, or set pleio_methods: conjfdr to skip PLEIO.")
+            }
+
+            def ch_ldsc_ref = channel.value(file(params.ldsc_ref, checkIfExists: true))
+
+            // cc traits need pop_prev (PLEIO liability scale), else NaN effect sizes
+            ch_pair_qc_pleio
+                .map { meta1, sumstats1, meta2, sumstats2 ->
+                    if (meta1.trait_type == 'cc' && !meta1.pop_prev) {
+                        error("PLEIO: ${meta1.id} is cc but pop_prev is empty: add pop_prev to gwas_pair.csv, or set pleio_methods: conjfdr to skip PLEIO.")
+                    }
+                    if (meta2.trait_type == 'cc' && !meta2.pop_prev) {
+                        error("PLEIO: ${meta2.id} is cc but pop_prev is empty: add pop_prev to gwas_pair.csv, or set pleio_methods: conjfdr to skip PLEIO.")
+                    }
+                    [ meta1, sumstats1, meta2, sumstats2 ]
+                }
+                .set { ch_pair_qc_pleio_checked }
+
+            // execute pleio
+            SHERLOCK_PLEIO(
+                ch_pair_qc_pleio_checked,
+                ch_ldsc_ref
+            )
+            ch_pleio = SHERLOCK_PLEIO.out.pleio_pass
         }
     }
 
@@ -243,6 +275,7 @@ workflow SHERLOCK {
     hdll           = ch_hdll                     // channel: [ meta1, meta2, path(*.hdll.tsv) ]
     lava           = ch_lava                     // channel: [ meta1, meta2, path(*.lava_bivar.tsv) ]
     conjfdr        = ch_conjfdr                  // channel: [ meta1, meta2, path(*.conjfdr.pass.tsv) ]
+    pleio          = ch_pleio                    // channel: [ meta1, meta2, path(*.pleio.pass.tsv) ]
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
 

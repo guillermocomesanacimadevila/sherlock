@@ -34,19 +34,24 @@ lrg_methods: hdll,lava                          # local rg methods to run; use "
 # lrg_lava_univ_thresh: 0.05                    # local h2 p threshold for the LAVA rg test (leave out = 0.05)
 
 # ---- pleio ----
-pleio_methods: conjfdr                          # pleiotropy methods to run (only conjfdr for now)
+pleio_methods: conjfdr,pleio                    # pleiotropy methods to run; use "conjfdr" to skip PLEIO
 # pleio_conjfdr_n_iter: 500                     # random LD-pruning iterations (leave out = 500)
 # pleio_conjfdr_seed: 154226                    # pruning seed (leave out = 154226)
 # pleio_conjfdr_maf_min: 0.005                  # min MAF in the reference (leave out = 0.005)
 # pleio_conjfdr_thresh: 0.05                    # conj_fdr threshold for the pass file (leave out = 0.05)
-                                                # MHC/APOE exclusion follows qc_drop_mhc / qc_drop_apoe
+                                                # conjFDR MHC/APOE exclusion follows qc_drop_mhc / qc_drop_apoe
+# pleio_pleio_nis: 100000                       # PLEIO importance sampling draws (leave out = 100000)
+# pleio_pleio_blup: true                        # BLUP per-trait effects, same run (leave out = true)
+# pleio_pleio_thresh: 5e-8                      # pleio_p threshold for the pass file (leave out = 5e-8, genome-wide)
+# pleio_pleio_trait_p: 0.05                     # per-trait P for the 'shared' flag (leave out = 0.05)
+                                                # PLEIO needs pop_prev for every cc trait in gwas_pair.csv
 
 # references
 ancestry: EUR                                   # population of both GWAS; ref_panel must match
 ref_panel: /path/to/1000G.EUR.QC.ALL            # PLINK prefix (.bed/.bim/.fam)
 chain_file: /path/to/hg19ToHg38.over.chain      # needed because SCZ is GRCh37 and target_build is GRCh38
 hm3: /path/to/w_hm3.snplist                     # HapMap3 SNP list for LDSC munge (rg step)
-ldsc_ref: /path/to/eur_w_ld_chr                 # LDSC LD score folder (rg step)
+ldsc_ref: /path/to/eur_w_ld_chr                 # LDSC LD score folder (rg step + PLEIO)
 hdl_ref: /path/to/UKB_imputed_SVD_eigen99_extraction   # HDL panel folder (rg step, EUR only), from github.com/zhenin/HDL/wiki/Reference-panels
 hdll_ref: /path/to/hdll_ref                    # HDL-L folder with LD.path/ and bim.path/ (lrg step, EUR only), from doi.org/10.5281/zenodo.11001214
 lava_ref: /path/to/lava_ref                    # LAVA folder with lava-ukb-v1.1_chr*.bcor/.info (lrg step, EUR, GRCh37), from github.com/josefin-werme/LAVA/blob/main/REFERENCE.md

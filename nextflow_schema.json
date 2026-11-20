@@ -193,13 +193,13 @@
             "title": "Pleiotropy options",
             "type": "object",
             "fa_icon": "fas fa-project-diagram",
-            "description": "Settings for the pleiotropy step (conjFDR). MHC and APOE exclusion follow qc_drop_mhc and qc_drop_apoe.",
+            "description": "Settings for the pleiotropy step (conjFDR, PLEIO). conjFDR MHC and APOE exclusion follow qc_drop_mhc and qc_drop_apoe. PLEIO uses ldsc_ref.",
             "properties": {
                 "pleio_methods": {
                     "type": "string",
-                    "default": "conjfdr",
-                    "pattern": "^((conjfdr)(,|$))+$",
-                    "description": "Comma-separated pleiotropy methods to run. Only 'conjfdr' for now.",
+                    "default": "conjfdr,pleio",
+                    "pattern": "^((conjfdr|pleio)(,|$))+$",
+                    "description": "Comma-separated pleiotropy methods to run: 'conjfdr', 'pleio' or 'conjfdr,pleio'.",
                     "fa_icon": "fas fa-list"
                 },
                 "pleio_conjfdr_n_iter": {
@@ -227,6 +227,36 @@
                     "maximum": 1,
                     "description": "conjFDR threshold for the pass file. Leave empty for the default (0.05).",
                     "help_text": "SNPs with conj_fdr below this value go to *.conjfdr.pass.tsv, which the loci step uses.",
+                    "fa_icon": "fas fa-filter"
+                },
+                "pleio_pleio_nis": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of PLEIO importance sampling draws. Leave empty for the default (100000).",
+                    "help_text": "Used to build the null distribution for pleio_p. More draws give more accurate small p-values but take longer.",
+                    "fa_icon": "fas fa-dice"
+                },
+                "pleio_pleio_blup": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Also estimate BLUP effect sizes per trait (BLUP1/BLUP2 columns).",
+                    "help_text": "Runs in the same PLEIO run. Shows which trait drives each PLEIO hit.",
+                    "fa_icon": "fas fa-balance-scale"
+                },
+                "pleio_pleio_thresh": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "pleio_p threshold for the pass file. Leave empty for the default (5e-8, genome-wide).",
+                    "help_text": "SNPs with pleio_p below this value go to *.pleio.pass.tsv, which the loci step uses. Also used for the 'novel' flag. Changing it means results no longer match the usual PLEIO studies.",
+                    "fa_icon": "fas fa-filter"
+                },
+                "pleio_pleio_trait_p": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Per-trait GWAS P cut-off for the 'shared' flag. Leave empty for the default (0.05).",
+                    "help_text": "A PLEIO hit is flagged shared when both traits have P below this value on their own.",
                     "fa_icon": "fas fa-filter"
                 }
             }
